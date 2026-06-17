@@ -1,0 +1,67 @@
+spring:
+  application:
+    name: blsscheduler
+  config:
+    import: "sm://"
+  cloud:
+    gcp:
+      project-id: bls-trainingscheduler
+      firestore:
+        database-id: bls-sched-db-test
+server:
+  port: 8080
+  address: 0.0.0.0
+app:
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:5173,http://localhost:8080
+  admin:
+    username: "${sm://super-id}"
+    password: "${sm://super-user-password}"
+  jwt:
+    secret: "${sm://jwt-key}"
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+
+---
+# ----------------------------------------------------
+# 1. LOCAL PROFILE (Runs against the Local Emulator)
+# ----------------------------------------------------
+spring:
+  config:
+    activate:
+      on-profile: local
+  cloud:
+    gcp:
+      firestore:
+        host-port: localhost:8089
+
+---
+# ----------------------------------------------------
+# 2. DEV PROFILE (Runs against your GCP Test Cloud Database)
+# ----------------------------------------------------
+spring:
+  config:
+    activate:
+      on-profile: dev
+  cloud:
+    gcp:
+      firestore:
+        database-id: bls-sched-db-test
+
+---
+# ----------------------------------------------------
+# 3. PROD PROFILE (Runs against your GCP Production Cloud Database)
+# ----------------------------------------------------
+spring:
+  config:
+    activate:
+      on-profile: prod
+  cloud:
+    gcp:
+      firestore:
+        database-id: bls-sched-db-prod
+app:
+  cors:
+    allowed-origins: https://scheduler.safetynetacce.info

@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A premium, lightweight, browser-based REST Client for testing API endpoints. Preloaded with BLS Scheduler API presets.">
+    <title>GlowClient - Modern API Runner</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0b0f19;
+            --bg-surface: #131a26;
+            --bg-element: #1c2638;
+            --border-color: #27354f;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --primary-glow: rgba(99, 102, 241, 0.4);
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-orange: #f59e0b;
+            --accent-blue: #0ea5e9;
+            --font-sans: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary), var(--accent-blue));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px var(--primary-glow);
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+            background: linear-gradient(to right, #ffffff, #9ca3af);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .badge {
+            background-color: var(--bg-element);
+            border: 1px solid var(--border-color);
+            color: var(--accent-blue);
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 2px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* App Layout */
+        .app-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 64px);
+            overflow: hidden;
+        }
+
+        /* Sidebar - Presets */
+        .sidebar {
+            width: 320px;
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        .preset-list {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .preset-item {
+            background-color: var(--bg-element);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            text-align: left;
+        }
+
+        .preset-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .preset-item.active {
+            border-color: var(--primary);
+            background: linear-gradient(145deg, var(--bg-element), rgba(99, 102, 241, 0.05));
+        }
+
+        .preset-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .method-badge {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .method-get { background-color: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .method-post { background-color: rgba(99, 102, 241, 0.15); color: var(--primary); }
+        .method-put { background-color: rgba(245, 158, 11, 0.15); color: var(--accent-orange); }
+        .method-delete { background-color: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+
+        .preset-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .preset-path {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Main Workspace */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-base);
+            padding: 1.5rem;
+            overflow-y: auto;
+            gap: 1.25rem;
+        }
+
+        /* Request Bar */
+        .request-bar {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 0.75rem;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .method-select {
+            background-color: var(--bg-element);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-weight: 600;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius-md);
+            outline: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .method-select:focus {
+            border-color: var(--primary);
+        }
+
+        .url-input {
+            flex: 1;
+            background-color: var(--bg-element);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius-md);
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .url-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            border: none;
+            font-family: var(--font-sans);
+            font-weight: 600;
+            padding: 0.75rem 2rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .send-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+        }
+
+        .send-btn:active {
+            transform: translateY(1px);
+        }
+
+        /* Config Card (Tabs for Body and Headers) */
+        .config-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 250px;
+        }
+
+        .tabs-header {
+            display: flex;
+            background-color: rgba(0, 0, 0, 0.15);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background-color: rgba(99, 102, 241, 0.03);
+        }
+
+        .tab-content {
+            padding: 1.25rem;
+            flex: 1;
+            display: none;
+            flex-direction: column;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* Headers Editor */
+        .headers-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+
+        .headers-table th {
+            text-align: left;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .headers-table td {
+            padding: 0.5rem 0;
+        }
+
+        .header-input {
+            background-color: var(--bg-element);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--radius-md);
+            width: 95%;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .header-input:focus {
+            border-color: var(--primary);
+        }
+
+        .remove-header-btn {
+            background: none;
+            border: none;
+            color: var(--accent-red);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0 0.5rem;
+            opacity: 0.7;
+            transition: var(--transition);
+        }
+
+        .remove-header-btn:hover {
+            opacity: 1;
+        }
+
+        .add-header-btn {
+            align-self: flex-start;
+            background-color: var(--bg-element);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-family: var(--font-sans);
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .add-header-btn:hover {
+            border-color: var(--primary);
+            color: var(--text-primary);
+        }
+
+        /* Body Editor */
+        .body-textarea {
+            width: 100%;
+            height: 180px;
+            background-color: var(--bg-element);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            outline: none;
+            resize: vertical;
+            transition: var(--transition);
+        }
+
+        .body-textarea:focus {
+            border-color: var(--primary);
+        }
+
+        /* Response Card */
+        .response-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex: 1;
+            min-height: 350px;
+        }
+
+        .response-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .response-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .response-meta {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .meta-stat {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .meta-stat span {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .status-badge {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+
+        .status-success {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status-error {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .response-body-container {
+            flex: 1;
+            padding: 1.25rem;
+            overflow: auto;
+            background-color: #080c14;
+            position: relative;
+        }
+
+        .response-pre {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .response-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            gap: 12px;
+        }
+
+        .response-placeholder-icon {
+            font-size: 2.5rem;
+            opacity: 0.5;
+        }
+
+        /* Token Helper Toast */
+        .token-toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background-color: var(--bg-element);
+            border: 1px solid var(--accent-blue);
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            z-index: 100;
+            max-width: 450px;
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            display: none;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .token-toast-content h4 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            margin-bottom: 2px;
+        }
+
+        .token-toast-content p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .toast-action-btn {
+            background-color: rgba(14, 165, 233, 0.15);
+            border: 1px solid rgba(14, 165, 233, 0.3);
+            color: var(--accent-blue);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .toast-action-btn:hover {
+            background-color: var(--accent-blue);
+            color: var(--bg-base);
+        }
+
+        .close-toast {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Premium Header -->
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon">G</div>
+            <h1>GlowClient</h1>
+            <span class="badge">REST Engine</span>
+        </div>
+        <div class="header-meta" style="color: var(--text-muted); font-size: 0.8rem;">
+            Serving directly from <span style="color: var(--text-secondary); font-weight: 500;">BLSScheduler Local</span>
+        </div>
+    </header>
+
+    <!-- App Container -->
+    <div class="app-container">
+        <!-- Sidebar with API Presets -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">BLS Scheduler API Presets</div>
+            </div>
+            <div class="preset-list" id="presetList">
+                <!-- Preset items will be dynamically injected -->
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="workspace">
+            <!-- Request Bar -->
+            <div class="request-bar">
+                <select id="requestMethod" class="method-select" aria-label="HTTP Method">
+                    <option value="GET">GET</option>
+                    <option value="POST" selected>POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+                <input type="text" id="requestUrl" class="url-input" placeholder="http://localhost:8080/api/endpoint" aria-label="Request URL">
+                <button id="sendRequestBtn" class="send-btn">
+                    <span>Send Request</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </div>
+
+            <!-- Configuration Card -->
+            <div class="config-card">
+                <div class="tabs-header">
+                    <button class="tab-btn active" onclick="switchTab('bodyTab')">Body (JSON)</button>
+                    <button class="tab-btn" onclick="switchTab('headersTab')">Headers</button>
+                </div>
+
+                <!-- Body Tab Content -->
+                <div id="bodyTab" class="tab-content active">
+                    <textarea id="requestBody" class="body-textarea" placeholder="{&#13;&#10;  &quot;key&quot;: &quot;value&quot;&#13;&#10;}" aria-label="Request Body"></textarea>
+                </div>
+
+                <!-- Headers Tab Content -->
+                <div id="headersTab" class="tab-content">
+                    <table class="headers-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40%;">Header Name</th>
+                                <th style="width: 50%;">Header Value</th>
+                                <th style="width: 10%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="headersTableBody">
+                            <!-- Headers injected here -->
+                        </tbody>
+                    </table>
+                    <button type="button" class="add-header-btn" onclick="addHeaderRow()">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Add Header
+                    </button>
+                </div>
+            </div>
+
+            <!-- Response Card -->
+            <div class="response-card">
+                <div class="response-header">
+                    <div class="response-title">Response</div>
+                    <div class="response-meta" id="responseMeta" style="display: none;">
+                        <div class="meta-stat" id="responseTime">Time: <span>0ms</span></div>
+                        <div class="status-badge" id="responseStatusBadge">200 OK</div>
+                    </div>
+                </div>
+                <div class="response-body-container" id="responseContainer">
+                    <div class="response-placeholder" id="responsePlaceholder">
+                        <div class="response-placeholder-icon">⚡</div>
+                        <p>Configure your request and hit Send to see the response here</p>
+                    </div>
+                    <pre class="response-pre" id="responsePre" style="display: none;"></pre>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Token Captured Toast -->
+    <div class="token-toast" id="tokenToast">
+        <div class="token-toast-content">
+            <h4>JWT Captured!</h4>
+            <p>Admin authentication returned a JWT token. Do you want to set it as your Authorization header?</p>
+        </div>
+        <button class="toast-action-btn" onclick="applyCapturedToken()">Apply Token</button>
+        <button class="close-toast" onclick="dismissToast()">&times;</button>
+    </div>
+
+    <!-- Script logic -->
+    <script>
+        // Preset configurations for BLS Scheduler
+        const presets = [
+            {
+                id: 'authAdmin',
+                name: '1a. Authenticate Super Admin',
+                method: 'POST',
+                url: 'http://localhost:8080/api/authenticate',
+                headers: [
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify({
+                    username: "Admin",
+                    password: "43V1n#092003"
+                }, null, 2)
+            },
+            {
+                id: 'authUser',
+                name: '1b. Authenticate Default User (Scheduler)',
+                method: 'POST',
+                url: 'http://localhost:8080/api/authenticate',
+                headers: [
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify({
+                    username: "user",
+                    password: "password"
+                }, null, 2)
+            },
+            {
+                id: 'getCompanies',
+                name: '2. Get All Companies (Public - Lookup)',
+                method: 'GET',
+                url: 'http://localhost:8080/api/companies',
+                headers: [],
+                body: ''
+            },
+            {
+                id: 'registerCompany',
+                name: '3. Register a Company',
+                method: 'POST',
+                url: 'http://localhost:8080/api/register',
+                headers: [
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify({
+                    companyName: "Acme Corp",
+                    purpose: "Basic Life Support Training scheduling",
+                    fullname: "John Doe",
+                    emailAddress: "john.doe@example.com",
+                    password: "password123",
+                    verifyPassword: "password123"
+                }, null, 2)
+            },
+            {
+                id: 'getCompanyUsers',
+                name: '4. Get Company Users (Protected)',
+                method: 'GET',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/users',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' }
+                ],
+                body: ''
+            },
+            {
+                id: 'addCompanyUser',
+                name: '5. Add Company User (Protected)',
+                method: 'POST',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/users',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' },
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify({
+                    name: "Jane Smith",
+                    username: "janesmith",
+                    email: "jane.smith@example.com",
+                    phonenumber: "123-456-7890"
+                }, null, 2)
+            },
+            {
+                id: 'updateCompanyUser',
+                name: '6. Update Company User (Protected)',
+                method: 'PUT',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/users/<INSERT_USER_ID_HERE>',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' },
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify({
+                    name: "Jane Smith Updated",
+                    username: "janesmith_updated",
+                    email: "jane.smith.updated@example.com",
+                    phonenumber: "987-654-3210"
+                }, null, 2)
+            },
+            {
+                id: 'deleteCompanyUser',
+                name: '7. Delete Company User (Protected)',
+                method: 'DELETE',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/users/<INSERT_USER_ID_HERE>',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' }
+                ],
+                body: ''
+            },
+            {
+                id: 'updateCompanyApproval',
+                name: '8. Update Company Approval Status',
+                method: 'PUT',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/approval',
+                headers: [
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify({
+                    approval: "Yes"
+                }, null, 2)
+            },
+            {
+                id: 'createDateSchedule',
+                name: '9. Create Date, Time & pre-populated Slots (User Only)',
+                method: 'POST',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' },
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify({
+                    dateValue: "2026-06-15",
+                    startTimeValue: "1:00 pm",
+                    endTimeValue: "1:45 pm",
+                    numberOfSSlots: 8
+                }, null, 2)
+            },
+            {
+                id: 'getCompanyDates',
+                name: '10. Get Company Scheduled Dates',
+                method: 'GET',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' }
+                ],
+                body: ''
+            },
+            {
+                id: 'getDateTimes',
+                name: '11. Get Times for a Date',
+                method: 'GET',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates/<INSERT_DATE_ID_HERE>/times',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' }
+                ],
+                body: ''
+            },
+            {
+                id: 'getTimeSlots',
+                name: '12. Get Class Slots for a Time Slot',
+                method: 'GET',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates/<INSERT_DATE_ID_HERE>/times/<INSERT_TIME_ID_HERE>/classslots',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' }
+                ],
+                body: ''
+            },
+            {
+                id: 'bookClassSlot',
+                name: '13. Book/Update a Class Slot',
+                method: 'PUT',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates/<INSERT_DATE_ID_HERE>/times/<INSERT_TIME_ID_HERE>/classslots/<INSERT_SLOT_ID_HERE>',
+                headers: [
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify({
+                    fullName: "John Doe",
+                    postNominalCredential: "MD",
+                    attendance: "Present"
+                }, null, 2)
+            },
+            {
+                id: 'runSystemTests',
+                name: '14. Run E2E System Tests & Verification Suite',
+                method: 'GET',
+                url: 'http://localhost:8080/api/test/run',
+                headers: [],
+                body: ''
+            }
+        ];
+
+        let capturedToken = '';
+
+        // Initialize UI
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPresets();
+            loadPreset(presets[0]); // Load first preset as default
+            
+            // Set up Send button listener
+            document.getElementById('sendRequestBtn').addEventListener('click', sendRequest);
+        });
+
+        function renderPresets() {
+            const list = document.getElementById('presetList');
+            list.innerHTML = '';
+            
+            presets.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'preset-item';
+                item.onclick = () => {
+                    document.querySelectorAll('.preset-item').forEach(el => el.classList.remove('active'));
+                    item.classList.add('active');
+                    loadPreset(p);
+                };
+                
+                const meta = document.createElement('div');
+                meta.className = 'preset-meta';
+                
+                const badge = document.createElement('span');
+                badge.className = `method-badge method-${p.method.toLowerCase()}`;
+                badge.textContent = p.method;
+                
+                const name = document.createElement('span');
+                name.className = 'preset-name';
+                name.textContent = p.name;
+                
+                const path = document.createElement('div');
+                path.className = 'preset-path';
+                path.textContent = p.url.replace('http://localhost:8080', '');
+                
+                meta.appendChild(badge);
+                meta.appendChild(name);
+                item.appendChild(meta);
+                item.appendChild(path);
+                
+                list.appendChild(item);
+            });
+        }
+
+        function loadPreset(preset) {
+            document.getElementById('requestMethod').value = preset.method;
+            document.getElementById('requestUrl').value = preset.url;
+            document.getElementById('requestBody').value = preset.body || '';
+            
+            // Render Headers
+            const tbody = document.getElementById('headersTableBody');
+            tbody.innerHTML = '';
+            
+            if (preset.headers && preset.headers.length > 0) {
+                preset.headers.forEach(h => {
+                    // Pre-fill captured token if available
+                    let val = h.value;
+                    if (h.name === 'Authorization' && val.includes('<INSERT_CAPTURED_JWT_HERE>') && capturedToken) {
+                        val = `Bearer ${capturedToken}`;
+                    }
+                    addHeaderRow(h.name, val);
+                });
+            } else {
+                addHeaderRow('', '');
+            }
+            
+            // Switch tabs: If GET, show Headers tab. If POST/PUT, show Body tab.
+            if (preset.method === 'GET' || preset.method === 'DELETE') {
+                switchTab('headersTab');
+            } else {
+                switchTab('bodyTab');
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('onclick').includes(tabId)) {
+                    btn.classList.add('active');
+                }
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        function addHeaderRow(name = '', value = '') {
+            const tbody = document.getElementById('headersTableBody');
+            const tr = document.createElement('tr');
+            
+            tr.innerHTML = `
+                <td><input type="text" class="header-input header-name-input" placeholder="Header Name" value="${name}"></td>
+                <td><input type="text" class="header-input header-value-input" placeholder="Value" value="${value}"></td>
+                <td><button type="button" class="remove-header-btn" onclick="removeHeaderRow(this)">&times;</button></td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function removeHeaderRow(btn) {
+            const tr = btn.closest('tr');
+            tr.remove();
+            
+            const tbody = document.getElementById('headersTableBody');
+            if (tbody.children.length === 0) {
+                addHeaderRow('', '');
+            }
+        }
+
+        async function sendRequest() {
+            const method = document.getElementById('requestMethod').value;
+            const url = document.getElementById('requestUrl').value;
+            const bodyContent = document.getElementById('requestBody').value;
+            
+            const btn = document.getElementById('sendRequestBtn');
+            const btnText = btn.querySelector('span');
+            btnText.textContent = 'Sending...';
+            btn.style.opacity = '0.7';
+            btn.disabled = true;
+
+            // Gather headers
+            const headers = {};
+            const rows = document.querySelectorAll('#headersTableBody tr');
+            rows.forEach(row => {
+                const name = row.querySelector('.header-name-input').value.trim();
+                const value = row.querySelector('.header-value-input').value.trim();
+                if (name) {
+                    headers[name] = value;
+                }
+            });
+
+            const startTime = performance.now();
+            
+            try {
+                const options = {
+                    method: method,
+                    headers: headers
+                };
+
+                if (method !== 'GET' && method !== 'HEAD' && bodyContent) {
+                    options.body = bodyContent;
+                }
+
+                const response = await fetch(url, options);
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+
+                const statusText = `${response.status} ${response.statusText}`;
+                const isSuccess = response.status >= 200 && response.status < 300;
+                
+                // Show metadata
+                document.getElementById('responseMeta').style.display = 'flex';
+                document.getElementById('responseTime').querySelector('span').textContent = `${duration}ms`;
+                
+                const badge = document.getElementById('responseStatusBadge');
+                badge.className = `status-badge ${isSuccess ? 'status-success' : 'status-error'}`;
+                badge.textContent = statusText;
+
+                // Parse and print body
+                const contentType = response.headers.get('content-type');
+                let output = '';
+                
+                if (contentType && contentType.includes('application/json')) {
+                    const json = await response.json();
+                    output = JSON.stringify(json, null, 2);
+                    
+                    // Capture token check: If it was the authenticate endpoint and succeeded
+                    if (url.includes('/api/authenticate') && json.jwt) {
+                        capturedToken = json.jwt;
+                        showTokenToast();
+                    }
+                } else {
+                    output = await response.text();
+                }
+
+                displayResponse(output);
+            } catch (err) {
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+
+                document.getElementById('responseMeta').style.display = 'flex';
+                document.getElementById('responseTime').querySelector('span').textContent = `${duration}ms`;
+                
+                const badge = document.getElementById('responseStatusBadge');
+                badge.className = 'status-badge status-error';
+                badge.textContent = 'Error Connecting';
+
+                displayResponse(`Failed to make the request: ${err.message}\n\nPlease verify that your Spring Boot backend is active and listening on ${url.split('/api')[0] || 'the target server'}.`);
+            } finally {
+                btnText.textContent = 'Send Request';
+                btn.style.opacity = '1';
+                btn.disabled = false;
+            }
+        }
+
+        function displayResponse(text) {
+            document.getElementById('responsePlaceholder').style.display = 'none';
+            const pre = document.getElementById('responsePre');
+            pre.style.display = 'block';
+            pre.textContent = text;
+        }
+
+        // JWT Capturing Toast Helpers
+        function showTokenToast() {
+            const toast = document.getElementById('tokenToast');
+            toast.style.display = 'flex';
+        }
+
+        function dismissToast() {
+            const toast = document.getElementById('tokenToast');
+            toast.style.display = 'none';
+        }
+
+        function applyCapturedToken() {
+            // Find any authorization headers in UI and update them
+            const rows = document.querySelectorAll('#headersTableBody tr');
+            let authRowFound = false;
+            
+            rows.forEach(row => {
+                const nameInput = row.querySelector('.header-name-input');
+                const valInput = row.querySelector('.header-value-input');
+                
+                if (nameInput.value.trim().toLowerCase() === 'authorization') {
+                    valInput.value = `Bearer ${capturedToken}`;
+                    authRowFound = true;
+                }
+            });
+            
+            if (!authRowFound) {
+                addHeaderRow('Authorization', `Bearer ${capturedToken}`);
+            }
+            
+            dismissToast();
+            
+            // Visually guide the user by activating the headers tab
+            switchTab('headersTab');
+        }
+    </script>
+</body>
+</html>
