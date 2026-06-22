@@ -702,7 +702,7 @@
                 ],
                 body: JSON.stringify({
                     username: "Admin",
-                    password: "43V1n#092003"
+                    password: ""
                 }, null, 2)
             },
             {
@@ -820,7 +820,11 @@
                     dateValue: "2026-06-15",
                     startTimeValue: "1:00 pm",
                     endTimeValue: "1:45 pm",
-                    numberOfSSlots: 8
+                    numberOfSSlots: 8,
+                    approved: "No",
+                    courseTitle: "BLS Provider Course",
+                    coursetype: "BLS Provider",
+                    instructorname: "John Instructor"
                 }, null, 2)
             },
             {
@@ -868,8 +872,100 @@
                 }, null, 2)
             },
             {
+                id: 'populateInstructors',
+                name: '14a. Populate/Seed Instructors Table',
+                method: 'POST',
+                url: 'http://localhost:8080/api/instructors/populate',
+                headers: [],
+                body: ''
+            },
+            {
+                id: 'createInstructor',
+                name: '14b. Create Custom Instructor',
+                method: 'POST',
+                url: 'http://localhost:8080/api/instructors',
+                headers: [
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify({
+                    certificationid: "CERT-99482",
+                    firstname: "Robert",
+                    lastname: "DeNiro",
+                    postnominalcredential: "MD, NRP",
+                    active: true
+                }, null, 2)
+            },
+            {
+                id: 'updateInstructor',
+                name: '14ca. Update Custom Instructor',
+                method: 'PUT',
+                url: 'http://localhost:8080/api/instructors/<INSERT_INSTRUCTOR_ID_HERE>',
+                headers: [
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify({
+                    certificationid: "CERT-99482",
+                    firstname: "Robert",
+                    lastname: "DeNiro",
+                    postnominalcredential: "MD, NRP, FACS",
+                    active: false
+                }, null, 2)
+            },
+            {
+                id: 'getInstructors',
+                name: '14c. Get All Instructors',
+                method: 'GET',
+                url: 'http://localhost:8080/api/instructors',
+                headers: [],
+                body: ''
+            },
+            {
+                id: 'populateCourses',
+                name: '14d. Populate/Seed Courses Table',
+                method: 'POST',
+                url: 'http://localhost:8080/api/courses/populate',
+                headers: [],
+                body: ''
+            },
+            {
+                id: 'createCourse',
+                name: '14e. Create Custom Course',
+                method: 'POST',
+                url: 'http://localhost:8080/api/courses',
+                headers: [
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify({
+                    coursetitle: "Pediatric Advanced Life Support (PALS)",
+                    coursetype: "PALS",
+                    active: true
+                }, null, 2)
+            },
+            {
+                id: 'updateCourse',
+                name: '14f. Update Custom Course',
+                method: 'PUT',
+                url: 'http://localhost:8080/api/courses/<INSERT_COURSE_ID_HERE>',
+                headers: [
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify({
+                    coursetitle: "PALS Recertification Course",
+                    coursetype: "PALS",
+                    active: false
+                }, null, 2)
+            },
+            {
+                id: 'getCourses',
+                name: '14g. Get All Courses',
+                method: 'GET',
+                url: 'http://localhost:8080/api/courses',
+                headers: [],
+                body: ''
+            },
+            {
                 id: 'runSystemTests',
-                name: '14. Run E2E System Tests & Verification Suite',
+                name: '15. Run E2E System Tests & Verification Suite',
                 method: 'GET',
                 url: 'http://localhost:8080/api/test/run',
                 headers: [],
