@@ -51,7 +51,8 @@ public class SecurityConfig {
                         .requestMatchers("/", "/index.html", "/api/authenticate", "/api/authenticate-by-company-name", "/api/register",
                                         "/api/classes", "/error", "/api/companies", "/api/companies/*/approval",
                                         "/api/companies/*/users", "/api/companies/*/users/*", "/api/test/**",
-                                        "/api/agent/**").permitAll()
+                                        "/api/agent/**", "/api/instructors", "/api/instructors/**",
+                                        "/api/courses", "/api/courses/**","api/companies/*/dates").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

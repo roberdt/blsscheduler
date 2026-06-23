@@ -8,9 +8,12 @@ public class ClassSlot {
 
     @DocumentId
     private String id;
-    private String fullName;
-    private String postNominalCredential;
-    private String attendance; // Format: YYYY-MM-DD
+    private String firstname;
+    private String lastname;
+    private String postnominalcredential;
+    private String attendance; // Show or No Show
+    private String passfail; // Pass, Fail, No Grade
+    private String score;
 
 
     public ClassSlot() {
@@ -25,20 +28,28 @@ public class ClassSlot {
         this.id = id;
     }
 
-    public String getFullName() {
-        return fullName;
+    public String getFirstname() {
+        return firstname;
     }
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
+    public void setFirstname(String firstname) {
+        this.firstname = firstname;
     }
 
-    public String getPostNominalCredential() {
-        return postNominalCredential;
+    public String getLastname() {
+        return lastname;
     }
 
-    public void setPostNominalCredential(String postNominalCredential) {
-        this.postNominalCredential = postNominalCredential;
+    public void setLastname(String lastname) {
+        this.lastname = lastname;
+    }
+
+    public String getPostnominalcredential() {
+        return postnominalcredential;
+    }
+
+    public void setPostnominalcredential(String postnominalcredential) {
+        this.postnominalcredential = postnominalcredential;
     }
 
     public String getAttendance() {
@@ -47,5 +58,21 @@ public class ClassSlot {
 
     public void setAttendance(String attendance) {
         this.attendance = attendance;
+    }
+
+    public String getPassfail() {
+        return passfail;
+    }
+
+    public void setPassfail(String passfail) {
+        this.passfail = passfail;
+    }
+
+    public String getScore() {
+        return score;
+    }
+
+    public void setScore(String score) {
+        this.score = score;
     }
 }

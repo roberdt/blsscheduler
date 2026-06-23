@@ -112,9 +112,9 @@ public class ClassSlotControllerTest {
 
         Time mockTime = new Time();
         mockTime.setId("time-id-456");
-        mockTime.setStartTimeValue("1:00 pm");
-        mockTime.setEndTimeValue("1:45 pm");
-        mockTime.setNumberOfSSlots(8);
+        mockTime.setStarttime("1:00 pm");
+        mockTime.setEndtime("1:45 pm");
+        mockTime.setNumberslots(8);
 
         Mockito.when(docSnapshot.getId()).thenReturn("time-id-456");
         Mockito.when(docSnapshot.toObject(Time.class)).thenReturn(mockTime);
@@ -130,9 +130,9 @@ public class ClassSlotControllerTest {
         mockMvc.perform(asyncDispatch(mvcResult))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("time-id-456"))
-                .andExpect(jsonPath("$[0].startTimeValue").value("1:00 pm"))
-                .andExpect(jsonPath("$[0].endTimeValue").value("1:45 pm"))
-                .andExpect(jsonPath("$[0].numberOfSSlots").value(8));
+                .andExpect(jsonPath("$[0].starttime").value("1:00 pm"))
+                .andExpect(jsonPath("$[0].endtime").value("1:45 pm"))
+                .andExpect(jsonPath("$[0].numberslots").value(8));
     }
 
     @Test
@@ -143,9 +143,12 @@ public class ClassSlotControllerTest {
 
         ClassSlot mockSlot = new ClassSlot();
         mockSlot.setId("slot-id-789");
-        mockSlot.setFullName("Jane Doe");
-        mockSlot.setPostNominalCredential("RN");
-        mockSlot.setAttendance("Present");
+        mockSlot.setFirstname("Jane");
+        mockSlot.setLastname("Doe");
+        mockSlot.setPostnominalcredential("RN");
+        mockSlot.setAttendance("Show");
+        mockSlot.setPassfail("Pass");
+        mockSlot.setScore("100");
 
         Mockito.when(docSnapshot.getId()).thenReturn("slot-id-789");
         Mockito.when(docSnapshot.toObject(ClassSlot.class)).thenReturn(mockSlot);
@@ -161,9 +164,12 @@ public class ClassSlotControllerTest {
         mockMvc.perform(asyncDispatch(mvcResult))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("slot-id-789"))
-                .andExpect(jsonPath("$[0].fullName").value("Jane Doe"))
-                .andExpect(jsonPath("$[0].postNominalCredential").value("RN"))
-                .andExpect(jsonPath("$[0].attendance").value("Present"));
+                .andExpect(jsonPath("$[0].firstname").value("Jane"))
+                .andExpect(jsonPath("$[0].lastname").value("Doe"))
+                .andExpect(jsonPath("$[0].postnominalcredential").value("RN"))
+                .andExpect(jsonPath("$[0].attendance").value("Show"))
+                .andExpect(jsonPath("$[0].passfail").value("Pass"))
+                .andExpect(jsonPath("$[0].score").value("100"));
     }
 
     @Test
@@ -174,9 +180,12 @@ public class ClassSlotControllerTest {
 
         ClassSlot existingSlot = new ClassSlot();
         existingSlot.setId("slot-id-789");
-        existingSlot.setFullName("");
-        existingSlot.setPostNominalCredential("");
-        existingSlot.setAttendance("NA (No Attendance)");
+        existingSlot.setFirstname("");
+        existingSlot.setLastname("");
+        existingSlot.setPostnominalcredential("");
+        existingSlot.setAttendance("No Show");
+        existingSlot.setPassfail("No Grade");
+        existingSlot.setScore("");
 
         Mockito.when(docSnapshot.exists()).thenReturn(true);
         Mockito.when(docSnapshot.toObject(ClassSlot.class)).thenReturn(existingSlot);
@@ -186,9 +195,12 @@ public class ClassSlotControllerTest {
         Mockito.when(slotDocRef.set(any(ClassSlot.class))).thenReturn(ApiFutures.immediateFuture(writeResult));
 
         ClassSlot requestBody = new ClassSlot();
-        requestBody.setFullName("John Smith");
-        requestBody.setPostNominalCredential("EMT");
-        requestBody.setAttendance("Present");
+        requestBody.setFirstname("John");
+        requestBody.setLastname("Smith");
+        requestBody.setPostnominalcredential("EMT");
+        requestBody.setAttendance("Show");
+        requestBody.setPassfail("Pass");
+        requestBody.setScore("90");
 
         MvcResult mvcResult = mockMvc.perform(put("/api/companies/acme-corp/dates/date-id-123/times/time-id-456/classslots/slot-id-789")
                         .with(csrf())
@@ -199,9 +211,12 @@ public class ClassSlotControllerTest {
 
         mockMvc.perform(asyncDispatch(mvcResult))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.fullName").value("John Smith"))
-                .andExpect(jsonPath("$.postNominalCredential").value("EMT"))
-                .andExpect(jsonPath("$.attendance").value("Present"));
+                .andExpect(jsonPath("$.firstname").value("John"))
+                .andExpect(jsonPath("$.lastname").value("Smith"))
+                .andExpect(jsonPath("$.postnominalcredential").value("EMT"))
+                .andExpect(jsonPath("$.attendance").value("Show"))
+                .andExpect(jsonPath("$.passfail").value("Pass"))
+                .andExpect(jsonPath("$.score").value("90"));
     }
 
     @Test
@@ -209,9 +224,9 @@ public class ClassSlotControllerTest {
     public void testCreateDateSchedule_ValidationFailed_NegativeSlots() throws Exception {
         ClassSlotController.DateScheduleRequest request = new ClassSlotController.DateScheduleRequest();
         request.setDateValue("2026-06-15");
-        request.setStartTimeValue("1:00 pm");
-        request.setEndTimeValue("1:45 pm");
-        request.setNumberOfSSlots(0); // Invalid slots (must be 1-30)
+        request.setStarttime("1:00 pm");
+        request.setEndtime("1:45 pm");
+        request.setNumberslots(0); // Invalid slots (must be 1-30)
 
         MvcResult mvcResult = mockMvc.perform(post("/api/companies/acme-corp/dates")
                         .with(csrf())
@@ -230,9 +245,9 @@ public class ClassSlotControllerTest {
     public void testCreateDateSchedule_AccessDenied_NotUser() throws Exception {
         ClassSlotController.DateScheduleRequest request = new ClassSlotController.DateScheduleRequest();
         request.setDateValue("2026-06-15");
-        request.setStartTimeValue("1:00 pm");
-        request.setEndTimeValue("1:45 pm");
-        request.setNumberOfSSlots(8);
+        request.setStarttime("1:00 pm");
+        request.setEndtime("1:45 pm");
+        request.setNumberslots(8);
 
         MvcResult mvcResult = mockMvc.perform(post("/api/companies/acme-corp/dates")
                         .with(csrf())

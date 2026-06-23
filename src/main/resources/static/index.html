@@ -818,11 +818,11 @@
                 ],
                 body: JSON.stringify({
                     dateValue: "2026-06-15",
-                    startTimeValue: "1:00 pm",
-                    endTimeValue: "1:45 pm",
-                    numberOfSSlots: 8,
-                    approved: "No",
-                    courseTitle: "BLS Provider Course",
+                    starttime: "1:00 pm",
+                    endtime: "1:45 pm",
+                    numberslots: 8,
+                    approved: false,
+                    coursetitle: "BLS Provider Course",
                     coursetype: "BLS Provider",
                     instructorname: "John Instructor"
                 }, null, 2)
@@ -848,6 +848,16 @@
                 body: ''
             },
             {
+                id: 'getAllCompanyClasses',
+                name: '11a. Get All Classes for Company (Flat List)',
+                method: 'GET',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/all-classes',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' }
+                ],
+                body: ''
+            },
+            {
                 id: 'getTimeSlots',
                 name: '12. Get Class Slots for a Time Slot',
                 method: 'GET',
@@ -866,9 +876,12 @@
                     { name: 'Content-Type', value: 'application/json' }
                 ],
                 body: JSON.stringify({
-                    fullName: "John Doe",
-                    postNominalCredential: "MD",
-                    attendance: "Present"
+                    firstname: "John",
+                    lastname: "Doe",
+                    postnominalcredential: "MD",
+                    attendance: "Show",
+                    passfail: "Pass",
+                    score: "98"
                 }, null, 2)
             },
             {

@@ -56,22 +56,22 @@ public class ClassSlotController {
             Principal principal,
             @RequestBody DateScheduleRequest request) {
 
-        // Check if authenticated user is the specific "user"
-        if (principal == null || !"user".equals(principal.getName())) {
-            return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body((Object) new ErrorResponse("Access denied. Only the default 'user' can create date schedules.")));
+        // Authenticated user check (enforced by SecurityConfig, but safe to keep check)
+        if (principal == null) {
+            return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body((Object) new ErrorResponse("Authentication required.")));
         }
 
         // Validate basic inputs
         if (request.getDateValue() == null || request.getDateValue().trim().isEmpty() ||
-            request.getStartTimeValue() == null || request.getStartTimeValue().trim().isEmpty() ||
-            request.getEndTimeValue() == null || request.getEndTimeValue().trim().isEmpty()) {
+            request.getStarttime() == null || request.getStarttime().trim().isEmpty() ||
+            request.getEndtime() == null || request.getEndtime().trim().isEmpty()) {
             return Mono.just(ResponseEntity.badRequest()
-                    .body((Object) new ErrorResponse("dateValue, startTimeValue, and endTimeValue are required.")));
+                    .body((Object) new ErrorResponse("dateValue, starttime, and endtime are required.")));
         }
 
         // Slots limit: 1-30, cannot be 0
-        int slots = request.getNumberOfSSlots();
+        int slots = request.getNumberslots();
         if (slots < 1 || slots > 30) {
             return Mono.just(ResponseEntity.badRequest()
                     .body((Object) new ErrorResponse("Slots must be between 1 and 30 (inclusive).")));
@@ -115,49 +115,120 @@ public class ClassSlotController {
 
                                 final DocumentReference targetDateDocRef = dateDocRef;
 
-                                // 2. Create the Time document under dates/{dateId}/times/
-                                String timeId = UUID.randomUUID().toString();
-                                DocumentReference timeDocRef = targetDateDocRef.collection("times").document(timeId);
+                                // 2. Check if Time document already exists under dates/{dateId}/times/
+                                CollectionReference timesRef = targetDateDocRef.collection("times");
+                                String courseTitle = request.getCoursetitle() != null ? request.getCoursetitle().trim() : "";
+                                String startTime = request.getStarttime().trim();
 
-                                Time newTime = new Time();
-                                newTime.setId(timeId);
-                                newTime.setStartTimeValue(request.getStartTimeValue().trim());
-                                newTime.setEndTimeValue(request.getEndTimeValue().trim());
-                                newTime.setNumberOfSSlots(slots);
+                                return fromApiFuture(timesRef
+                                        .whereEqualTo("starttime", startTime)
+                                        .whereEqualTo("coursetitle", courseTitle)
+                                        .get())
+                                        .flatMap(timeQuery -> {
+                                            if (!timeQuery.isEmpty()) {
+                                                // Time already exists, skip creation and return existing
+                                                QueryDocumentSnapshot timeDoc = timeQuery.getDocuments().get(0);
+                                                String existingTimeId = timeDoc.getId();
 
-                                // 3. Pre-populate blank ClassSlots with "NA (No Attendance)"
-                                List<Mono<WriteResult>> slotSaveMonos = new ArrayList<>();
-                                List<ClassSlot> createdSlots = new ArrayList<>();
+                                                // Optionally fetch existing slots to return in SuccessResponse
+                                                return fromApiFuture(timeDoc.getReference().collection("classslots").get())
+                                                        .map(slotsSnapshot -> {
+                                                            List<ClassSlot> existingSlots = slotsSnapshot.getDocuments().stream()
+                                                                    .map(doc -> {
+                                                                        ClassSlot s = doc.toObject(ClassSlot.class);
+                                                                        s.setId(doc.getId());
+                                                                        return s;
+                                                                    })
+                                                                    .collect(Collectors.toList());
 
-                                CollectionReference slotsRef = timeDocRef.collection("classslots");
-                                for (int i = 0; i < slots; i++) {
-                                    String slotId = UUID.randomUUID().toString();
-                                    DocumentReference slotDocRef = slotsRef.document(slotId);
+                                                            return ResponseEntity.ok((Object) new SuccessResponse(
+                                                                    "Date and Time slot already exist. No new slots were created.",
+                                                                    targetDateDocRef.getId(),
+                                                                    existingTimeId,
+                                                                    existingSlots
+                                                            ));
+                                                        });
+                                            }
 
-                                    ClassSlot slot = new ClassSlot();
-                                    slot.setId(slotId);
-                                    slot.setFullName("");
-                                    slot.setPostNominalCredential("");
-                                    slot.setAttendance("NA (No Attendance)");
+                                            // 3. Create the Time document under dates/{dateId}/times/
+                                            String timeId = UUID.randomUUID().toString();
+                                            DocumentReference timeDocRef = timesRef.document(timeId);
 
-                                    createdSlots.add(slot);
-                                    slotSaveMonos.add(fromApiFuture(slotDocRef.set(slot)));
-                                }
+                                            Time newTime = new Time();
+                                            newTime.setId(timeId);
+                                            newTime.setStarttime(startTime);
+                                            newTime.setEndtime(request.getEndtime().trim());
+                                            newTime.setNumberslots(slots);
+                                            newTime.setApproved(request.isApproved());
+                                            newTime.setCoursetitle(courseTitle);
+                                            newTime.setCoursetype(request.getCoursetype() != null ? request.getCoursetype().trim() : "");
+                                            newTime.setInstructorname(request.getInstructorname() != null ? request.getInstructorname().trim() : "");
 
-                                // Run all operations reactively in chain
-                                return dateSaveMono
-                                        .then(fromApiFuture(timeDocRef.set(newTime)))
-                                        .then(Mono.defer(() -> Flux.concat(slotSaveMonos).then()))
-                                        .thenReturn(ResponseEntity.status(HttpStatus.CREATED).body((Object) new SuccessResponse(
-                                                "Date, time slot, and " + slots + " pre-populated class slots created successfully.",
-                                                targetDateDocRef.getId(),
-                                                timeId,
-                                                createdSlots
-                                        )));
+                                            // 4. Pre-populate blank ClassSlots with "No Show"
+                                            List<Mono<WriteResult>> slotSaveMonos = new ArrayList<>();
+                                            List<ClassSlot> createdSlots = new ArrayList<>();
+
+                                            CollectionReference slotsRef = timeDocRef.collection("classslots");
+                                            for (int i = 0; i < slots; i++) {
+                                                String slotId = UUID.randomUUID().toString();
+                                                DocumentReference slotDocRef = slotsRef.document(slotId);
+
+                                                ClassSlot slot = new ClassSlot();
+                                                slot.setId(slotId);
+                                                slot.setFirstname("");
+                                                slot.setLastname("");
+                                                slot.setPostnominalcredential("");
+                                                slot.setAttendance("No Show");
+                                                slot.setPassfail("No Grade");
+                                                slot.setScore("");
+
+                                                createdSlots.add(slot);
+                                                slotSaveMonos.add(fromApiFuture(slotDocRef.set(slot)));
+                                            }
+
+                                            // Run all operations reactively in chain
+                                            return dateSaveMono
+                                                    .then(fromApiFuture(timeDocRef.set(newTime)))
+                                                    .then(Mono.defer(() -> Flux.concat(slotSaveMonos).then()))
+                                                    .thenReturn(ResponseEntity.status(HttpStatus.CREATED).body((Object) new SuccessResponse(
+                                                            "Date, time slot, and " + slots + " pre-populated class slots created successfully.",
+                                                            targetDateDocRef.getId(),
+                                                            timeId,
+                                                            createdSlots
+                                                    )));
+                                        });
                             });
                 })
                 .onErrorResume(t -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body((Object) new ErrorResponse("An error occurred: " + t.getMessage()))));
+    }
+
+    /**
+     * Get all classes (times) for a company across all dates.
+     */
+    @GetMapping("/all-classes")
+    public Mono<ResponseEntity<List<CompanyClassResponse>>> getAllClasses(@PathVariable String companyId) {
+        CollectionReference datesRef = firestore.collection("companies").document(companyId).collection("dates");
+
+        return fromApiFuture(datesRef.get())
+                .flatMapMany(dateSnapshot -> Flux.fromIterable(dateSnapshot.getDocuments()))
+                .flatMap(dateDoc -> {
+                    Date date = dateDoc.toObject(Date.class);
+                    String dateValue = date.getDateValue();
+                    String dateId = dateDoc.getId();
+
+                    CollectionReference timesRef = dateDoc.getReference().collection("times");
+                    return fromApiFuture(timesRef.get())
+                            .flatMapMany(timeSnapshot -> Flux.fromIterable(timeSnapshot.getDocuments()))
+                            .map(timeDoc -> {
+                                Time time = timeDoc.toObject(Time.class);
+                                time.setId(timeDoc.getId());
+                                return new CompanyClassResponse(dateValue, dateId, time);
+                            });
+                })
+                .collectList()
+                .map(ResponseEntity::ok)
+                .onErrorResume(t -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()));
     }
 
     /**
@@ -270,14 +341,23 @@ public class ClassSlotController {
                     ClassSlot slot = doc.toObject(ClassSlot.class);
                     slot.setId(slotId);
 
-                    if (requestSlot.getFullName() != null) {
-                        slot.setFullName(requestSlot.getFullName());
+                    if (requestSlot.getFirstname() != null) {
+                        slot.setFirstname(requestSlot.getFirstname());
                     }
-                    if (requestSlot.getPostNominalCredential() != null) {
-                        slot.setPostNominalCredential(requestSlot.getPostNominalCredential());
+                    if (requestSlot.getLastname() != null) {
+                        slot.setLastname(requestSlot.getLastname());
+                    }
+                    if (requestSlot.getPostnominalcredential() != null) {
+                        slot.setPostnominalcredential(requestSlot.getPostnominalcredential());
                     }
                     if (requestSlot.getAttendance() != null) {
                         slot.setAttendance(requestSlot.getAttendance());
+                    }
+                    if (requestSlot.getPassfail() != null) {
+                        slot.setPassfail(requestSlot.getPassfail());
+                    }
+                    if (requestSlot.getScore() != null) {
+                        slot.setScore(requestSlot.getScore());
                     }
 
                     return fromApiFuture(slotRef.set(slot))
@@ -291,9 +371,13 @@ public class ClassSlotController {
     // DTOs & Helper Classes
     public static class DateScheduleRequest {
         private String dateValue;
-        private String startTimeValue;
-        private String endTimeValue;
-        private int numberOfSSlots;
+        private String starttime;
+        private String endtime;
+        private int numberslots;
+        private boolean approved;
+        private String coursetitle;
+        private String coursetype;
+        private String instructorname;
 
         public String getDateValue() {
             return dateValue;
@@ -303,28 +387,98 @@ public class ClassSlotController {
             this.dateValue = dateValue;
         }
 
-        public String getStartTimeValue() {
-            return startTimeValue;
+        public String getStarttime() {
+            return starttime;
         }
 
-        public void setStartTimeValue(String startTimeValue) {
-            this.startTimeValue = startTimeValue;
+        public void setStarttime(String starttime) {
+            this.starttime = starttime;
         }
 
-        public String getEndTimeValue() {
-            return endTimeValue;
+        public String getEndtime() {
+            return endtime;
         }
 
-        public void setEndTimeValue(String endTimeValue) {
-            this.endTimeValue = endTimeValue;
+        public void setEndtime(String endtime) {
+            this.endtime = endtime;
         }
 
-        public int getNumberOfSSlots() {
-            return numberOfSSlots;
+        public int getNumberslots() {
+            return numberslots;
         }
 
-        public void setNumberOfSSlots(int numberOfSSlots) {
-            this.numberOfSSlots = numberOfSSlots;
+        public void setNumberslots(int numberslots) {
+            this.numberslots = numberslots;
+        }
+
+        public boolean isApproved() {
+            return approved;
+        }
+
+        public void setApproved(boolean approved) {
+            this.approved = approved;
+        }
+
+        public String getCoursetitle() {
+            return coursetitle;
+        }
+
+        public void setCoursetitle(String coursetitle) {
+            this.coursetitle = coursetitle;
+        }
+
+        public String getCoursetype() {
+            return coursetype;
+        }
+
+        public void setCoursetype(String coursetype) {
+            this.coursetype = coursetype;
+        }
+
+        public String getInstructorname() {
+            return instructorname;
+        }
+
+        public void setInstructorname(String instructorname) {
+            this.instructorname = instructorname;
+        }
+    }
+
+    public static class CompanyClassResponse {
+        private String dateValue;
+        private String dateId;
+        private Time classInfo;
+
+        public CompanyClassResponse() {}
+
+        public CompanyClassResponse(String dateValue, String dateId, Time classInfo) {
+            this.dateValue = dateValue;
+            this.dateId = dateId;
+            this.classInfo = classInfo;
+        }
+
+        public String getDateValue() {
+            return dateValue;
+        }
+
+        public void setDateValue(String dateValue) {
+            this.dateValue = dateValue;
+        }
+
+        public String getDateId() {
+            return dateId;
+        }
+
+        public void setDateId(String dateId) {
+            this.dateId = dateId;
+        }
+
+        public Time getClassInfo() {
+            return classInfo;
+        }
+
+        public void setClassInfo(Time classInfo) {
+            this.classInfo = classInfo;
         }
     }
 

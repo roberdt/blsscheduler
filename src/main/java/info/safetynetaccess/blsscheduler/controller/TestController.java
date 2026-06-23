@@ -153,9 +153,9 @@ public class TestController {
         // Verify Validation Limits on ClassSlotController
         ClassSlotController.DateScheduleRequest badRequest = new ClassSlotController.DateScheduleRequest();
         badRequest.setDateValue("2026-06-30");
-        badRequest.setStartTimeValue("1:00 pm");
-        badRequest.setEndTimeValue("1:45 pm");
-        badRequest.setNumberOfSSlots(0); // 0 is invalid
+        badRequest.setStarttime("1:00 pm");
+        badRequest.setEndtime("1:45 pm");
+        badRequest.setNumberslots(0); // 0 is invalid
 
         return classSlotController.createDateSchedule(mockCompanyId, mockPrincipal, badRequest)
                 .flatMap(validationResponse -> {
@@ -183,9 +183,13 @@ public class TestController {
                                 // Step B: Request scheduling of a date, time, and 3 slots
                                 ClassSlotController.DateScheduleRequest validRequest = new ClassSlotController.DateScheduleRequest();
                                 validRequest.setDateValue("2026-06-30");
-                                validRequest.setStartTimeValue("1:00 pm");
-                                validRequest.setEndTimeValue("1:45 pm");
-                                validRequest.setNumberOfSSlots(3);
+                                validRequest.setStarttime("1:00 pm");
+                                validRequest.setEndtime("1:45 pm");
+                                validRequest.setNumberslots(3);
+                                validRequest.setApproved(false);
+                                validRequest.setCoursetitle("E2E Test Course");
+                                validRequest.setCoursetype("BLS Provider");
+                                validRequest.setInstructorname("Automated Tester");
 
                                 return classSlotController.createDateSchedule(mockCompanyId, mockPrincipal, validRequest);
                             })
@@ -209,16 +213,31 @@ public class TestController {
                                 }
 
                                 boolean allPrepopulated = returnedSlots.stream()
-                                        .allMatch(slot -> "NA (No Attendance)".equals(slot.getAttendance()) && 
-                                                          "".equals(slot.getFullName()) && 
-                                                          "".equals(slot.getPostNominalCredential()));
+                                        .allMatch(slot -> "No Show".equals(slot.getAttendance()) && 
+                                                          "".equals(slot.getFirstname()) && 
+                                                          "".equals(slot.getLastname()) &&
+                                                          "".equals(slot.getPostnominalcredential()) &&
+                                                          "No Grade".equals(slot.getPassfail()));
                                 if (!allPrepopulated) {
-                                    throw new IllegalStateException("Class slots were not correctly pre-populated with empty names or NA attendance");
+                                    throw new IllegalStateException("Class slots were not correctly pre-populated with empty names or No Show attendance");
                                 }
 
                                 // Step D: Fetch from Firestore to confirm they persist correctly
                                 DocumentReference timeRef = companyDocRef.collection("dates").document(dateId).collection("times").document(timeId);
-                                return fromApiFuture(timeRef.collection("classslots").get())
+                                return fromApiFuture(timeRef.get())
+                                        .flatMap(timeDoc -> {
+                                            if (!timeDoc.exists()) {
+                                                throw new IllegalStateException("Time document does not exist in Firestore.");
+                                            }
+                                            Time savedTime = timeDoc.toObject(Time.class);
+                                            if (savedTime.isApproved() ||
+                                                !"E2E Test Course".equals(savedTime.getCoursetitle()) ||
+                                                !"BLS Provider".equals(savedTime.getCoursetype()) ||
+                                                !"Automated Tester".equals(savedTime.getInstructorname())) {
+                                                throw new IllegalStateException("Saved Time document fields do not match request parameters.");
+                                            }
+                                            return fromApiFuture(timeRef.collection("classslots").get());
+                                        })
                                         .flatMap(querySnapshot -> {
                                             if (querySnapshot.size() != 3) {
                                                 throw new IllegalStateException("Firestore subcollection contains " + querySnapshot.size() + " slots, expected exactly 3.");
@@ -229,18 +248,51 @@ public class TestController {
                                             String slotId = firstSlotDoc.getId();
 
                                             ClassSlot updateReq = new ClassSlot();
-                                            updateReq.setFullName("John Doe, Test Engine");
-                                            updateReq.setPostNominalCredential("RN, MSN");
-                                            updateReq.setAttendance("Present");
+                                            updateReq.setFirstname("John");
+                                            updateReq.setLastname("Doe");
+                                            updateReq.setPostnominalcredential("RN, MSN");
+                                            updateReq.setAttendance("Show");
+                                            updateReq.setPassfail("Pass");
+                                            updateReq.setScore("95");
 
                                             return classSlotController.updateClassSlot(mockCompanyId, dateId, timeId, slotId, updateReq)
+                                                    .flatMap(updateResponse -> {
+                                                        // Step E2: Verify "Get All Classes" endpoint
+                                                        TestResult allClassesTestResult = new TestResult("All-Classes Retrieval Integration");
+                                                        long allClassesStart = System.currentTimeMillis();
+                                                        return classSlotController.getAllClasses(mockCompanyId)
+                                                                .flatMap(allClassesResponse -> {
+                                                                    allClassesTestResult.setDurationMs(System.currentTimeMillis() - allClassesStart);
+                                                                    if (allClassesResponse.getStatusCode() != HttpStatus.OK) {
+                                                                        allClassesTestResult.setStatus("FAILED");
+                                                                        allClassesTestResult.setDetails("Failed to fetch all classes. Status: " + allClassesResponse.getStatusCode());
+                                                                    } else {
+                                                                        List<ClassSlotController.CompanyClassResponse> classes = (List<ClassSlotController.CompanyClassResponse>) allClassesResponse.getBody();
+                                                                        if (classes == null || classes.isEmpty()) {
+                                                                            allClassesTestResult.setStatus("FAILED");
+                                                                            allClassesTestResult.setDetails("All-classes endpoint returned empty list, expected at least 1 session.");
+                                                                        } else {
+                                                                            boolean foundCreated = classes.stream().anyMatch(c -> c.getDateId().equals(dateId) && c.getClassInfo().getId().equals(timeId));
+                                                                            if (foundCreated) {
+                                                                                allClassesTestResult.setStatus("PASSED");
+                                                                                allClassesTestResult.setDetails("Successfully verified 'all-classes' endpoint. Found the newly created session across date boundaries.");
+                                                                            } else {
+                                                                                allClassesTestResult.setStatus("FAILED");
+                                                                                allClassesTestResult.setDetails("Created session was not found in the 'all-classes' response.");
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    report.addResult(allClassesTestResult);
+                                                                    return Mono.just(updateResponse);
+                                                                });
+                                                    })
                                                     .flatMap(updateResponse -> {
                                                         if (updateResponse.getStatusCode() != HttpStatus.OK) {
                                                             throw new IllegalStateException("Failed to update class slot. Response status: " + updateResponse.getStatusCode());
                                                         }
 
                                                         ClassSlot updatedSlot = (ClassSlot) updateResponse.getBody();
-                                                        if (updatedSlot == null || !"John Doe, Test Engine".equals(updatedSlot.getFullName()) || !"Present".equals(updatedSlot.getAttendance())) {
+                                                        if (updatedSlot == null || !"John".equals(updatedSlot.getFirstname()) || !"Show".equals(updatedSlot.getAttendance())) {
                                                             throw new IllegalStateException("Updated slot returned from endpoint did not match update request parameters.");
                                                         }
 

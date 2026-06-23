@@ -8,28 +8,32 @@ public class Time {
 
     @DocumentId
     private String id;
-    private String startTimeValue; // e.g., "09:00 AM"
-    private String endTimeValue; // e.g., "09:00 AM"
-    private int numberOfSSlots;
+    private boolean approved; // true or false
+    private String coursetitle;
+    private String coursetype; //BLS Provider, Heartsaver CPR, First Aid
+    private String instructorname;
+    private String starttime; // e.g., "09:00 AM"
+    private String endtime; // e.g., "09:00 AM"
+    private int numberslots;
 
     public Time() {
 
     }
 
-    public String getStartTimeValue() {
-        return startTimeValue;
+    public String getStarttime() {
+        return starttime;
     }
 
-    public void setStartTimeValue(String startTimeValue) {
-        this.startTimeValue = startTimeValue;
+    public void setStarttime(String starttime) {
+        this.starttime = starttime;
     }
 
-    public String getEndTimeValue() {
-        return endTimeValue;
+    public String getEndtime() {
+        return endtime;
     }
 
-    public void setEndTimeValue(String endTimeValue) {
-        this.endTimeValue = endTimeValue;
+    public void setEndtime(String endtime) {
+        this.endtime = endtime;
     }
 
     public String getId() {
@@ -41,11 +45,43 @@ public class Time {
     }
 
 
-    public int getNumberOfSSlots() {
-        return numberOfSSlots;
+    public int getNumberslots() {
+        return numberslots;
     }
 
-    public void setNumberOfSSlots(int numberOfSSlots) {
-        this.numberOfSSlots = numberOfSSlots;
+    public void setNumberslots(int numberslots) {
+        this.numberslots = numberslots;
+    }
+
+    public boolean isApproved() {
+        return approved;
+    }
+
+    public void setApproved(boolean approved) {
+        this.approved = approved;
+    }
+
+    public String getCoursetitle() {
+        return coursetitle;
+    }
+
+    public void setCoursetitle(String coursetitle) {
+        this.coursetitle = coursetitle;
+    }
+
+    public String getCoursetype() {
+        return coursetype;
+    }
+
+    public void setCoursetype(String coursetype) {
+        this.coursetype = coursetype;
+    }
+
+    public String getInstructorname() {
+        return instructorname;
+    }
+
+    public void setInstructorname(String instructorname) {
+        this.instructorname = instructorname;
     }
 }
