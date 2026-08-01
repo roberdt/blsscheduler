@@ -62,6 +62,12 @@ public class ClassSlotController {
                     .body((Object) new ErrorResponse("Authentication required.")));
         }
 
+        // Requirement: Only available to the “user” account
+        if (!"user".equals(principal.getName())) {
+            return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body((Object) new ErrorResponse("Access denied. Only the default 'user' can create date schedules.")));
+        }
+
         // Validate basic inputs
         if (request.getDateValue() == null || request.getDateValue().trim().isEmpty() ||
             request.getStarttime() == null || request.getStarttime().trim().isEmpty() ||
@@ -175,12 +181,15 @@ public class ClassSlotController {
 
                                                 ClassSlot slot = new ClassSlot();
                                                 slot.setId(slotId);
+                                                slot.setAhaid("");
                                                 slot.setFirstname("");
                                                 slot.setLastname("");
+                                                slot.setEmail("");
                                                 slot.setPostnominalcredential("");
                                                 slot.setAttendance("No Show");
                                                 slot.setPassfail("No Grade");
                                                 slot.setScore("");
+                                                slot.setNotes("");
 
                                                 createdSlots.add(slot);
                                                 slotSaveMonos.add(fromApiFuture(slotDocRef.set(slot)));
@@ -341,11 +350,17 @@ public class ClassSlotController {
                     ClassSlot slot = doc.toObject(ClassSlot.class);
                     slot.setId(slotId);
 
+                    if (requestSlot.getAhaid() != null) {
+                        slot.setAhaid(requestSlot.getAhaid());
+                    }
                     if (requestSlot.getFirstname() != null) {
                         slot.setFirstname(requestSlot.getFirstname());
                     }
                     if (requestSlot.getLastname() != null) {
                         slot.setLastname(requestSlot.getLastname());
+                    }
+                    if (requestSlot.getEmail() != null) {
+                        slot.setEmail(requestSlot.getEmail());
                     }
                     if (requestSlot.getPostnominalcredential() != null) {
                         slot.setPostnominalcredential(requestSlot.getPostnominalcredential());
@@ -359,6 +374,9 @@ public class ClassSlotController {
                     if (requestSlot.getScore() != null) {
                         slot.setScore(requestSlot.getScore());
                     }
+                    if (requestSlot.getNotes() != null) {
+                        slot.setNotes(requestSlot.getNotes());
+                    }
 
                     return fromApiFuture(slotRef.set(slot))
                             .map(writeResult -> ResponseEntity.ok((Object) slot));
@@ -367,8 +385,293 @@ public class ClassSlotController {
                         .body((Object) new ErrorResponse("Failed to update class slot: " + t.getMessage()))));
     }
 
+    /**
+     * Add a new class slot to an existing class.
+     */
+    @PostMapping("/dates/{dateId}/times/{timeId}/classslots")
+    public Mono<ResponseEntity<Object>> addClassSlot(
+            @PathVariable String companyId,
+            @PathVariable String dateId,
+            @PathVariable String timeId) {
 
-    // DTOs & Helper Classes
+        DocumentReference timeRef = firestore.collection("companies")
+                .document(companyId)
+                .collection("dates")
+                .document(dateId)
+                .collection("times")
+                .document(timeId);
+
+        return fromApiFuture(timeRef.get())
+                .flatMap(timeDoc -> {
+                    if (!timeDoc.exists()) {
+                        return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                .body((Object) new ErrorResponse("Class with ID \"" + timeId + "\" not found.")));
+                    }
+
+                    Time time = timeDoc.toObject(Time.class);
+                    time.setId(timeDoc.getId());
+
+                    // Increment the number of slots in the class metadata
+                    time.setNumberslots(time.getNumberslots() + 1);
+
+                    // Create the new slot
+                    String slotId = UUID.randomUUID().toString();
+                    ClassSlot newSlot = new ClassSlot();
+                    newSlot.setId(slotId);
+                    newSlot.setAhaid("");
+                    newSlot.setFirstname("");
+                    newSlot.setLastname("");
+                    newSlot.setEmail("");
+                    newSlot.setPostnominalcredential("");
+                    newSlot.setAttendance("No Show");
+                    newSlot.setPassfail("No Grade");
+                    newSlot.setScore("");
+                    newSlot.setNotes("");
+
+                    DocumentReference slotRef = timeRef.collection("classslots").document(slotId);
+
+                    return fromApiFuture(timeRef.set(time))
+                            .then(fromApiFuture(slotRef.set(newSlot)))
+                            .thenReturn(ResponseEntity.status(HttpStatus.CREATED).body((Object) newSlot));
+                })
+                .onErrorResume(t -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body((Object) new ErrorResponse("Failed to add class slot: " + t.getMessage()))));
+    }
+
+    /**
+     * Batch add (populate) class slots.
+     */
+    @PostMapping("/dates/{dateId}/times/{timeId}/classslots/add")
+    public Mono<ResponseEntity<Object>> batchAddClassSlots(
+            @PathVariable String companyId,
+            @PathVariable String dateId,
+            @PathVariable String timeId,
+            @RequestBody List<ClassSlot> requestSlots) {
+
+        if (requestSlots == null || requestSlots.isEmpty()) {
+            return Mono.just(ResponseEntity.badRequest().body(new ErrorResponse("Request body cannot be empty.")));
+        }
+
+        CollectionReference slotsRef = firestore.collection("companies")
+                .document(companyId)
+                .collection("dates")
+                .document(dateId)
+                .collection("times")
+                .document(timeId)
+                .collection("classslots");
+
+        List<Mono<WriteResult>> updateMonos = requestSlots.stream().map(slot -> {
+            if (slot.getId() == null || slot.getId().isEmpty()) {
+                return Mono.<WriteResult>error(new IllegalArgumentException("Each slot must have an ID to be populated."));
+            }
+            DocumentReference slotRef = slotsRef.document(slot.getId());
+            return fromApiFuture(slotRef.set(slot));
+        }).collect(Collectors.toList());
+
+        return Flux.merge(updateMonos)
+                .then(Mono.just(ResponseEntity.ok((Object) new GenericSuccessResponse("Successfully populated " + requestSlots.size() + " slots."))))
+                .onErrorResume(t -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new ErrorResponse("Batch add failed: " + t.getMessage()))));
+    }
+
+    /**
+     * Batch update class slots.
+     */
+    @PutMapping("/dates/{dateId}/times/{timeId}/classslots/update")
+    public Mono<ResponseEntity<Object>> batchUpdateClassSlots(
+            @PathVariable String companyId,
+            @PathVariable String dateId,
+            @PathVariable String timeId,
+            @RequestBody List<ClassSlot> requestSlots) {
+
+        if (requestSlots == null || requestSlots.isEmpty()) {
+            return Mono.just(ResponseEntity.badRequest().body(new ErrorResponse("Request body cannot be empty.")));
+        }
+
+        CollectionReference slotsRef = firestore.collection("companies")
+                .document(companyId)
+                .collection("dates")
+                .document(dateId)
+                .collection("times")
+                .document(timeId)
+                .collection("classslots");
+
+        List<Mono<WriteResult>> updateMonos = requestSlots.stream().map(requestSlot -> {
+            if (requestSlot.getId() == null || requestSlot.getId().isEmpty()) {
+                return Mono.<WriteResult>error(new IllegalArgumentException("Each slot must have an ID to be updated."));
+            }
+            DocumentReference slotRef = slotsRef.document(requestSlot.getId());
+            
+            return fromApiFuture(slotRef.get()).flatMap(doc -> {
+                if (!doc.exists()) {
+                    return Mono.error(new RuntimeException("Slot ID " + requestSlot.getId() + " not found."));
+                }
+                ClassSlot slot = doc.toObject(ClassSlot.class);
+                slot.setId(doc.getId());
+
+                if (requestSlot.getAhaid() != null) slot.setAhaid(requestSlot.getAhaid());
+                if (requestSlot.getFirstname() != null) slot.setFirstname(requestSlot.getFirstname());
+                if (requestSlot.getLastname() != null) slot.setLastname(requestSlot.getLastname());
+                if (requestSlot.getEmail() != null) slot.setEmail(requestSlot.getEmail());
+                if (requestSlot.getPostnominalcredential() != null) slot.setPostnominalcredential(requestSlot.getPostnominalcredential());
+                if (requestSlot.getAttendance() != null) slot.setAttendance(requestSlot.getAttendance());
+                if (requestSlot.getPassfail() != null) slot.setPassfail(requestSlot.getPassfail());
+                if (requestSlot.getScore() != null) slot.setScore(requestSlot.getScore());
+                if (requestSlot.getNotes() != null) slot.setNotes(requestSlot.getNotes());
+
+                return fromApiFuture(slotRef.set(slot));
+            });
+        }).collect(Collectors.toList());
+
+        return Flux.merge(updateMonos)
+                .then(Mono.just(ResponseEntity.ok((Object) new GenericSuccessResponse("Successfully updated " + requestSlots.size() + " slots."))))
+                .onErrorResume(t -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new ErrorResponse("Batch update failed: " + t.getMessage()))));
+    }
+
+    /**
+     * Batch reset class slots to default values.
+     */
+    @PostMapping("/dates/{dateId}/times/{timeId}/classslots/delete")
+    public Mono<ResponseEntity<Object>> batchResetClassSlots(
+            @PathVariable String companyId,
+            @PathVariable String dateId,
+            @PathVariable String timeId,
+            @RequestBody List<String> slotIds) {
+
+        if (slotIds == null || slotIds.isEmpty()) {
+            return Mono.just(ResponseEntity.badRequest().body(new ErrorResponse("Slot ID list cannot be empty.")));
+        }
+
+        CollectionReference slotsRef = firestore.collection("companies")
+                .document(companyId)
+                .collection("dates")
+                .document(dateId)
+                .collection("times")
+                .document(timeId)
+                .collection("classslots");
+
+        List<Mono<WriteResult>> resetMonos = slotIds.stream().map(slotId -> {
+            DocumentReference slotRef = slotsRef.document(slotId);
+            
+            ClassSlot defaultSlot = new ClassSlot();
+            defaultSlot.setId(slotId);
+            defaultSlot.setAhaid("");
+            defaultSlot.setFirstname("");
+            defaultSlot.setLastname("");
+            defaultSlot.setEmail("");
+            defaultSlot.setPostnominalcredential("");
+            defaultSlot.setAttendance("No Show");
+            defaultSlot.setPassfail("No Grade");
+            defaultSlot.setScore("");
+            defaultSlot.setNotes("");
+
+            return fromApiFuture(slotRef.set(defaultSlot));
+        }).collect(Collectors.toList());
+
+        return Flux.merge(resetMonos)
+                .then(Mono.just(ResponseEntity.ok((Object) new GenericSuccessResponse("Successfully reset " + slotIds.size() + " slots to defaults."))))
+                .onErrorResume(t -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new ErrorResponse("Batch reset failed: " + t.getMessage()))));
+    }
+
+    /**
+     * Get a specific class (Time record) by ID.
+     */
+    @GetMapping("/dates/{dateId}/times/{timeId}")
+    public Mono<ResponseEntity<Object>> getTime(
+            @PathVariable String companyId,
+            @PathVariable String dateId,
+            @PathVariable String timeId) {
+        DocumentReference dateRef = firestore.collection("companies")
+                .document(companyId)
+                .collection("dates")
+                .document(dateId);
+        DocumentReference timeRef = dateRef.collection("times")
+                .document(timeId);
+
+        return fromApiFuture(dateRef.get())
+                .flatMap(dateDoc -> {
+                    if (!dateDoc.exists()) {
+                        return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                .body((Object) new ErrorResponse("Date with ID \"" + dateId + "\" not found.")));
+                    }
+                    Date date = dateDoc.toObject(Date.class);
+                    
+                    return fromApiFuture(timeRef.get())
+                            .map(timeDoc -> {
+                                if (!timeDoc.exists()) {
+                                    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                            .body((Object) new ErrorResponse("Class with ID \"" + timeId + "\" not found."));
+                                }
+                                Time time = timeDoc.toObject(Time.class);
+                                time.setId(timeDoc.getId());
+                                
+                                return ResponseEntity.ok((Object) new CompanyClassResponse(
+                                        date.getDateValue(),
+                                        dateDoc.getId(),
+                                        time
+                                ));
+                            });
+                })
+                .onErrorResume(t -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body((Object) new ErrorResponse("Failed to fetch class: " + t.getMessage()))));
+    }
+
+    /**
+     * Update an existing class (Time record).
+     */
+    @PutMapping("/dates/{dateId}/times/{timeId}")
+    public Mono<ResponseEntity<Object>> updateClass(
+            @PathVariable String companyId,
+            @PathVariable String dateId,
+            @PathVariable String timeId,
+            @RequestBody Time requestTime) {
+
+        DocumentReference timeRef = firestore.collection("companies")
+                .document(companyId)
+                .collection("dates")
+                .document(dateId)
+                .collection("times")
+                .document(timeId);
+
+        return fromApiFuture(timeRef.get())
+                .flatMap(doc -> {
+                    if (!doc.exists()) {
+                        return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                .body((Object) new ErrorResponse("Class with ID \"" + timeId + "\" not found.")));
+                    }
+
+                    Time time = doc.toObject(Time.class);
+                    time.setId(timeId);
+
+                    if (requestTime.getCoursetitle() != null) {
+                        time.setCoursetitle(requestTime.getCoursetitle());
+                    }
+                    if (requestTime.getCoursetype() != null) {
+                        time.setCoursetype(requestTime.getCoursetype());
+                    }
+                    if (requestTime.getInstructorname() != null) {
+                        time.setInstructorname(requestTime.getInstructorname());
+                    }
+                    if (requestTime.getStarttime() != null) {
+                        time.setStarttime(requestTime.getStarttime());
+                    }
+                    if (requestTime.getEndtime() != null) {
+                        time.setEndtime(requestTime.getEndtime());
+                    }
+                    
+                    // For primitive types, we update them as provided in the request body
+                    time.setNumberslots(requestTime.getNumberslots());
+                    time.setApproved(requestTime.isApproved());
+
+                    return fromApiFuture(timeRef.set(time))
+                            .map(writeResult -> ResponseEntity.ok((Object) time));
+                })
+                .onErrorResume(t -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body((Object) new ErrorResponse("Failed to update class: " + t.getMessage()))));
+    }
+
     public static class DateScheduleRequest {
         private String dateValue;
         private String starttime;
@@ -509,6 +812,18 @@ public class ClassSlotController {
 
         public List<ClassSlot> getClassSlots() {
             return classSlots;
+        }
+    }
+
+    public static class GenericSuccessResponse {
+        private final String message;
+
+        public GenericSuccessResponse(String message) {
+            this.message = message;
+        }
+
+        public String getMessage() {
+            return message;
         }
     }
 

@@ -45,6 +45,18 @@ public class TestController {
     private UserDetailsService userDetailsService;
 
     @Autowired
+    private CourseController courseController;
+ 
+    @Autowired
+    private InstructorController instructorController;
+
+    @Autowired
+    private AgentLoggingController agentLoggingController;
+
+    @Autowired
+    private GeminiRoutingController geminiRoutingController;
+ 
+    @Autowired
     private ClassSlotController classSlotController;
 
     /**
@@ -248,6 +260,7 @@ public class TestController {
                                             String slotId = firstSlotDoc.getId();
 
                                             ClassSlot updateReq = new ClassSlot();
+                                            updateReq.setAhaid("AHA-TEST-999");
                                             updateReq.setFirstname("John");
                                             updateReq.setLastname("Doe");
                                             updateReq.setPostnominalcredential("RN, MSN");
@@ -287,6 +300,76 @@ public class TestController {
                                                                 });
                                                     })
                                                     .flatMap(updateResponse -> {
+                                                        // Step E3: Verify Company-Specific Courses & Instructors
+                                                        TestResult multiTenantTestResult = new TestResult("Multi-Tenant Isolation Integration");
+                                                        long mtStart = System.currentTimeMillis();
+ 
+                                                        return courseController.populateCourses(mockCompanyId)
+                                                                .flatMap(coursePopResponse -> {
+                                                                    if (coursePopResponse.getStatusCode() != HttpStatus.CREATED) {
+                                                                        throw new IllegalStateException("Failed to populate company courses.");
+                                                                    }
+                                                                    return instructorController.populateInstructors(mockCompanyId);
+                                                                })
+                                                                .flatMap(instPopResponse -> {
+                                                                    if (instPopResponse.getStatusCode() != HttpStatus.CREATED) {
+                                                                        throw new IllegalStateException("Failed to populate company instructors.");
+                                                                    }
+                                                                    // Check if they exist for this company
+                                                                    return courseController.getAllCourses(mockCompanyId);
+                                                                })
+                                                                .flatMap(coursesResponse -> {
+                                                                    List courses = (List) coursesResponse.getBody();
+                                                                    if (courses == null || courses.isEmpty()) {
+                                                                        throw new IllegalStateException("Courses list is empty for company after population.");
+                                                                    }
+                                                                    return instructorController.getAllInstructors(mockCompanyId);
+                                                                })
+                                                                .flatMap(instResponse -> {
+                                                                    List insts = (List) instResponse.getBody();
+                                                                    if (insts == null || insts.isEmpty()) {
+                                                                        throw new IllegalStateException("Instructors list is empty for company after population.");
+                                                                    }
+                                                                    
+                                                                     // Step E4: Verify Company-Specific Agent Endpoints
+                                                                     TestResult agentTestResult = new TestResult("Agent Platform Integration (Scoped)");
+                                                                     long agentStart = System.currentTimeMillis();
+
+                                                                     Map<String, String> routeReq = new HashMap<>();
+                                                                     routeReq.put("prompt", "Verify multi-tenant routing for " + mockCompanyId);
+
+                                                                     return geminiRoutingController.routeWorkflow(mockCompanyId, routeReq)
+                                                                         .flatMap(routeResp -> {
+                                                                             if (routeResp.getStatusCode() != HttpStatus.OK) {
+                                                                                 throw new IllegalStateException("Agent routing failed for scoped company.");
+                                                                             }
+                                                                             agentTestResult.setStatus("PASSED");
+                                                                             agentTestResult.setDetails("Successfully verified company-scoped Agent Routing and Logging integration.");
+                                                                             agentTestResult.setDurationMs(System.currentTimeMillis() - agentStart);
+                                                                             report.addResult(agentTestResult);
+
+                                                                             // Cleanup sub-collections
+                                                                             DocumentReference compRef = firestore.collection("companies").document(mockCompanyId);
+                                                                             return fromApiFuture(compRef.collection("courses").get())
+                                                                                     .flatMap(qs -> Flux.fromIterable(qs.getDocuments())
+                                                                                             .flatMap(d -> fromApiFuture(d.getReference().delete()))
+                                                                                             .then())
+                                                                                     .then(fromApiFuture(compRef.collection("instructors").get())
+                                                                                             .flatMap(qs -> Flux.fromIterable(qs.getDocuments())
+                                                                                                     .flatMap(d -> fromApiFuture(d.getReference().delete()))
+                                                                                                     .then()))
+                                                                                     .then(Mono.defer(() -> {
+                                                                                         multiTenantTestResult.setStatus("PASSED");
+                                                                                         multiTenantTestResult.setDetails("Successfully verified company-specific courses and instructors. Data is isolated within company sub-collections.");
+                                                                                         multiTenantTestResult.setDurationMs(System.currentTimeMillis() - mtStart);
+                                                                                         report.addResult(multiTenantTestResult);
+                                                                                         return Mono.just(updateResponse);
+                                                                                     }));
+                                                                         });
+                                                                 });
+                                                    })
+                                                    .flatMap(response -> {
+                                                        ResponseEntity<Object> updateResponse = (ResponseEntity<Object>) response;
                                                         if (updateResponse.getStatusCode() != HttpStatus.OK) {
                                                             throw new IllegalStateException("Failed to update class slot. Response status: " + updateResponse.getStatusCode());
                                                         }

@@ -715,12 +715,13 @@
                 ],
                 body: JSON.stringify({
                     username: "user",
-                    password: "password"
+                    password: "password",
+                    companyId: "<INSERT_COMPANY_ID_HERE>"
                 }, null, 2)
             },
             {
                 id: 'getCompanies',
-                name: '2. Get All Companies (Public - Lookup)',
+                name: '2. Get All Companies (Public lookup)',
                 method: 'GET',
                 url: 'http://localhost:8080/api/companies',
                 headers: [],
@@ -736,7 +737,7 @@
                 ],
                 body: JSON.stringify({
                     companyName: "Acme Corp",
-                    purpose: "Basic Life Support Training scheduling",
+                    purpose: "Basic Life Support Training",
                     fullname: "John Doe",
                     emailAddress: "john.doe@example.com",
                     password: "password123",
@@ -797,10 +798,11 @@
             },
             {
                 id: 'updateCompanyApproval',
-                name: '8. Update Company Approval Status',
+                name: '8. Update Company Approval Status (Protected)',
                 method: 'PUT',
                 url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/approval',
                 headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' },
                     { name: 'Content-Type', value: 'application/json' }
                 ],
                 body: JSON.stringify({
@@ -809,7 +811,7 @@
             },
             {
                 id: 'createDateSchedule',
-                name: '9. Create Date, Time & pre-populated Slots (User Only)',
+                name: '9. Create Date, Time & Slots (Protected)',
                 method: 'POST',
                 url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates',
                 headers: [
@@ -829,7 +831,7 @@
             },
             {
                 id: 'getCompanyDates',
-                name: '10. Get Company Scheduled Dates',
+                name: '10. Get Company Dates (Protected)',
                 method: 'GET',
                 url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates',
                 headers: [
@@ -838,18 +840,8 @@
                 body: ''
             },
             {
-                id: 'getDateTimes',
-                name: '11. Get Times for a Date',
-                method: 'GET',
-                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates/<INSERT_DATE_ID_HERE>/times',
-                headers: [
-                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' }
-                ],
-                body: ''
-            },
-            {
                 id: 'getAllCompanyClasses',
-                name: '11a. Get All Classes for Company (Flat List)',
+                name: '11. Get All Classes - Flat List (Protected)',
                 method: 'GET',
                 url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/all-classes',
                 headers: [
@@ -858,8 +850,18 @@
                 body: ''
             },
             {
+                id: 'getDateTimes',
+                name: '12. Get Times for a Date (Protected)',
+                method: 'GET',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates/<INSERT_DATE_ID_HERE>/times',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' }
+                ],
+                body: ''
+            },
+            {
                 id: 'getTimeSlots',
-                name: '12. Get Class Slots for a Time Slot',
+                name: '13. Get Class Slots for a Time Slot',
                 method: 'GET',
                 url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates/<INSERT_DATE_ID_HERE>/times/<INSERT_TIME_ID_HERE>/classslots',
                 headers: [
@@ -869,35 +871,121 @@
             },
             {
                 id: 'bookClassSlot',
-                name: '13. Book/Update a Class Slot',
+                name: '14. Book/Update a Class Slot (Protected)',
                 method: 'PUT',
                 url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates/<INSERT_DATE_ID_HERE>/times/<INSERT_TIME_ID_HERE>/classslots/<INSERT_SLOT_ID_HERE>',
                 headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' },
                     { name: 'Content-Type', value: 'application/json' }
                 ],
                 body: JSON.stringify({
+                    ahaid: "AHA-123456",
                     firstname: "John",
                     lastname: "Doe",
+                    email: "john.doe@example.com",
                     postnominalcredential: "MD",
                     attendance: "Show",
                     passfail: "Pass",
-                    score: "98"
+                    score: "98",
+                    notes: "Excellent performance."
                 }, null, 2)
             },
             {
-                id: 'populateInstructors',
-                name: '14a. Populate/Seed Instructors Table',
+                id: 'addClassSlot',
+                name: '15. Add a single Class Slot (Protected)',
                 method: 'POST',
-                url: 'http://localhost:8080/api/instructors/populate',
-                headers: [],
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates/<INSERT_DATE_ID_HERE>/times/<INSERT_TIME_ID_HERE>/classslots',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' }
+                ],
+                body: ''
+            },
+            {
+                id: 'batchAddClassSlots',
+                name: '15b. Batch Add/Populate Class Slots',
+                method: 'POST',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates/<INSERT_DATE_ID_HERE>/times/<INSERT_TIME_ID_HERE>/classslots/add',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' },
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify([
+                    {
+                        id: "<INSERT_SLOT_ID_1>",
+                        ahaid: "AHA-111",
+                        firstname: "Alice",
+                        lastname: "Wonder",
+                        email: "alice@example.com",
+                        postnominalcredential: "RN",
+                        attendance: "Show",
+                        passfail: "Pass",
+                        score: "95",
+                        notes: "Completed all modules."
+                    },
+                    {
+                        id: "<INSERT_SLOT_ID_2>",
+                        ahaid: "AHA-222",
+                        firstname: "Bob",
+                        lastname: "Builder",
+                        email: "bob@example.com",
+                        postnominalcredential: "EMT",
+                        attendance: "Show",
+                        passfail: "Pass",
+                        score: "92",
+                        notes: "Very good skills."
+                    }
+                ], null, 2)
+            },
+            {
+                id: 'batchUpdateClassSlots',
+                name: '15c. Batch Update Class Slots',
+                method: 'PUT',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates/<INSERT_DATE_ID_HERE>/times/<INSERT_TIME_ID_HERE>/classslots/update',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' },
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify([
+                    {
+                        id: "<INSERT_SLOT_ID_1>",
+                        email: "updated.email@example.com",
+                        attendance: "No Show",
+                        passfail: "No Grade",
+                        notes: "Rescheduled."
+                    }
+                ], null, 2)
+            },
+            {
+                id: 'batchResetClassSlots',
+                name: '15d. Batch Delete (Reset) Class Slots',
+                method: 'POST',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/dates/<INSERT_DATE_ID_HERE>/times/<INSERT_TIME_ID_HERE>/classslots/delete',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' },
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify([
+                    "<INSERT_SLOT_ID_1>",
+                    "<INSERT_SLOT_ID_2>"
+                ], null, 2)
+            },
+            {
+                id: 'populateInstructors',
+                name: '16a. Populate Company Instructors (Protected)',
+                method: 'POST',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/instructors/populate',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' }
+                ],
                 body: ''
             },
             {
                 id: 'createInstructor',
-                name: '14b. Create Custom Instructor',
+                name: '16b. Create Company Instructor',
                 method: 'POST',
-                url: 'http://localhost:8080/api/instructors',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/instructors',
                 headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' },
                     { name: 'Content-Type', value: 'application/json' }
                 ],
                 body: JSON.stringify({
@@ -909,43 +997,32 @@
                 }, null, 2)
             },
             {
-                id: 'updateInstructor',
-                name: '14ca. Update Custom Instructor',
-                method: 'PUT',
-                url: 'http://localhost:8080/api/instructors/<INSERT_INSTRUCTOR_ID_HERE>',
-                headers: [
-                    { name: 'Content-Type', value: 'application/json' }
-                ],
-                body: JSON.stringify({
-                    certificationid: "CERT-99482",
-                    firstname: "Robert",
-                    lastname: "DeNiro",
-                    postnominalcredential: "MD, NRP, FACS",
-                    active: false
-                }, null, 2)
-            },
-            {
                 id: 'getInstructors',
-                name: '14c. Get All Instructors',
+                name: '16c. Get Company Instructors (Protected)',
                 method: 'GET',
-                url: 'http://localhost:8080/api/instructors',
-                headers: [],
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/instructors',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' }
+                ],
                 body: ''
             },
             {
                 id: 'populateCourses',
-                name: '14d. Populate/Seed Courses Table',
+                name: '17a. Populate Company Courses (Protected)',
                 method: 'POST',
-                url: 'http://localhost:8080/api/courses/populate',
-                headers: [],
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/courses/populate',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' }
+                ],
                 body: ''
             },
             {
                 id: 'createCourse',
-                name: '14e. Create Custom Course',
+                name: '17b. Create Company Course (Protected)',
                 method: 'POST',
-                url: 'http://localhost:8080/api/courses',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/courses',
                 headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' },
                     { name: 'Content-Type', value: 'application/json' }
                 ],
                 body: JSON.stringify({
@@ -955,30 +1032,47 @@
                 }, null, 2)
             },
             {
-                id: 'updateCourse',
-                name: '14f. Update Custom Course',
-                method: 'PUT',
-                url: 'http://localhost:8080/api/courses/<INSERT_COURSE_ID_HERE>',
-                headers: [
-                    { name: 'Content-Type', value: 'application/json' }
-                ],
-                body: JSON.stringify({
-                    coursetitle: "PALS Recertification Course",
-                    coursetype: "PALS",
-                    active: false
-                }, null, 2)
-            },
-            {
                 id: 'getCourses',
-                name: '14g. Get All Courses',
+                name: '17c. Get Company Courses (Protected)',
                 method: 'GET',
-                url: 'http://localhost:8080/api/courses',
-                headers: [],
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/courses',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' }
+                ],
                 body: ''
             },
             {
+                id: 'logAgentEvent',
+                name: '18a. Log Agent Event (Protected)',
+                method: 'POST',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/agent/log',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' },
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify({
+                    logId: "LOG-" + Date.now(),
+                    agentName: "GlowClient",
+                    level: "INFO",
+                    message: "Manual log event."
+                }, null, 2)
+            },
+            {
+                id: 'routeWorkflow',
+                name: '18b. Route Gemini Workflow (Protected)',
+                method: 'POST',
+                url: 'http://localhost:8080/api/companies/<INSERT_COMPANY_ID_HERE>/agent/route',
+                headers: [
+                    { name: 'Authorization', value: 'Bearer <INSERT_CAPTURED_JWT_HERE>' },
+                    { name: 'Content-Type', value: 'application/json' }
+                ],
+                body: JSON.stringify({
+                    prompt: "Check Acme Corp status."
+                }, null, 2)
+            },
+            {
                 id: 'runSystemTests',
-                name: '15. Run E2E System Tests & Verification Suite',
+                name: '19. Run E2E System Tests (Public)',
                 method: 'GET',
                 url: 'http://localhost:8080/api/test/run',
                 headers: [],
