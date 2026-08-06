@@ -137,12 +137,74 @@ public class ClassSlotControllerTest {
 
     @Test
     @WithMockUser(username = "user")
+    public void testGetTime_Success() throws Exception {
+        DocumentSnapshot docSnapshot = Mockito.mock(DocumentSnapshot.class);
+
+        Time mockTime = new Time();
+        mockTime.setId("time-id-456");
+        mockTime.setStarttime("1:00 pm");
+        mockTime.setEndtime("1:45 pm");
+        mockTime.setNumberslots(8);
+
+        DocumentSnapshot dateDocSnapshot = Mockito.mock(DocumentSnapshot.class);
+        Date mockDate = new Date("2026-06-15");
+        Mockito.when(dateDocSnapshot.exists()).thenReturn(true);
+        Mockito.when(dateDocSnapshot.getId()).thenReturn("date-id-123");
+        Mockito.when(dateDocSnapshot.toObject(Date.class)).thenReturn(mockDate);
+
+        Mockito.when(docSnapshot.exists()).thenReturn(true);
+        Mockito.when(docSnapshot.getId()).thenReturn("time-id-456");
+        Mockito.when(docSnapshot.toObject(Time.class)).thenReturn(mockTime);
+
+        // Use real, completed ApiFutures
+        Mockito.when(dateDocRef.get()).thenReturn(ApiFutures.immediateFuture(dateDocSnapshot));
+        Mockito.when(timeDocRef.get()).thenReturn(ApiFutures.immediateFuture(docSnapshot));
+
+        MvcResult mvcResult = mockMvc.perform(get("/api/companies/acme-corp/dates/date-id-123/times/time-id-456"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(mvcResult))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dateId").value("date-id-123"))
+                .andExpect(jsonPath("$.dateValue").value("2026-06-15"))
+                .andExpect(jsonPath("$.classInfo.id").value("time-id-456"))
+                .andExpect(jsonPath("$.classInfo.starttime").value("1:00 pm"))
+                .andExpect(jsonPath("$.classInfo.endtime").value("1:45 pm"))
+                .andExpect(jsonPath("$.classInfo.numberslots").value(8));
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    public void testGetTime_NotFound() throws Exception {
+        DocumentSnapshot dateDocSnapshot = Mockito.mock(DocumentSnapshot.class);
+        DocumentSnapshot timeDocSnapshot = Mockito.mock(DocumentSnapshot.class);
+
+        Mockito.when(dateDocSnapshot.exists()).thenReturn(true);
+        Mockito.when(timeDocSnapshot.exists()).thenReturn(false);
+
+        // Use real, completed ApiFutures
+        Mockito.when(dateDocRef.get()).thenReturn(ApiFutures.immediateFuture(dateDocSnapshot));
+        Mockito.when(timeDocRef.get()).thenReturn(ApiFutures.immediateFuture(timeDocSnapshot));
+
+        MvcResult mvcResult = mockMvc.perform(get("/api/companies/acme-corp/dates/date-id-123/times/time-id-nonexistent"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(mvcResult))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Class with ID \"time-id-nonexistent\" not found."));
+    }
+
+    @Test
+    @WithMockUser(username = "user")
     public void testGetClassSlots_Success() throws Exception {
         QuerySnapshot querySnapshot = Mockito.mock(QuerySnapshot.class);
         QueryDocumentSnapshot docSnapshot = Mockito.mock(QueryDocumentSnapshot.class);
 
         ClassSlot mockSlot = new ClassSlot();
         mockSlot.setId("slot-id-789");
+        mockSlot.setAhaid("AHA-999");
         mockSlot.setFirstname("Jane");
         mockSlot.setLastname("Doe");
         mockSlot.setPostnominalcredential("RN");
@@ -164,6 +226,7 @@ public class ClassSlotControllerTest {
         mockMvc.perform(asyncDispatch(mvcResult))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("slot-id-789"))
+                .andExpect(jsonPath("$[0].ahaid").value("AHA-999"))
                 .andExpect(jsonPath("$[0].firstname").value("Jane"))
                 .andExpect(jsonPath("$[0].lastname").value("Doe"))
                 .andExpect(jsonPath("$[0].postnominalcredential").value("RN"))
@@ -180,6 +243,7 @@ public class ClassSlotControllerTest {
 
         ClassSlot existingSlot = new ClassSlot();
         existingSlot.setId("slot-id-789");
+        existingSlot.setAhaid("");
         existingSlot.setFirstname("");
         existingSlot.setLastname("");
         existingSlot.setPostnominalcredential("");
@@ -195,6 +259,7 @@ public class ClassSlotControllerTest {
         Mockito.when(slotDocRef.set(any(ClassSlot.class))).thenReturn(ApiFutures.immediateFuture(writeResult));
 
         ClassSlot requestBody = new ClassSlot();
+        requestBody.setAhaid("AHA-Updated");
         requestBody.setFirstname("John");
         requestBody.setLastname("Smith");
         requestBody.setPostnominalcredential("EMT");
@@ -211,6 +276,7 @@ public class ClassSlotControllerTest {
 
         mockMvc.perform(asyncDispatch(mvcResult))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ahaid").value("AHA-Updated"))
                 .andExpect(jsonPath("$.firstname").value("John"))
                 .andExpect(jsonPath("$.lastname").value("Smith"))
                 .andExpect(jsonPath("$.postnominalcredential").value("EMT"))
@@ -259,5 +325,81 @@ public class ClassSlotControllerTest {
         mockMvc.perform(asyncDispatch(mvcResult))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Access denied. Only the default 'user' can create date schedules."));
+    }
+    @Test
+    @WithMockUser(username = "user")
+    public void testBatchAddClassSlots_Success() throws Exception {
+        WriteResult writeResult = Mockito.mock(WriteResult.class);
+        Mockito.when(slotDocRef.set(any(ClassSlot.class))).thenReturn(ApiFutures.immediateFuture(writeResult));
+
+        ClassSlot slot1 = new ClassSlot();
+        slot1.setId("slot-1");
+        slot1.setFirstname("Alice");
+        
+        ClassSlot slot2 = new ClassSlot();
+        slot2.setId("slot-2");
+        slot2.setFirstname("Bob");
+
+        MvcResult mvcResult = mockMvc.perform(post("/api/companies/acme-corp/dates/date-1/times/time-1/classslots/add")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Arrays.asList(slot1, slot2))))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(mvcResult))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Successfully populated 2 slots."));
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    public void testBatchUpdateClassSlots_Success() throws Exception {
+        DocumentSnapshot docSnapshot = Mockito.mock(DocumentSnapshot.class);
+        WriteResult writeResult = Mockito.mock(WriteResult.class);
+        
+        ClassSlot existingSlot = new ClassSlot();
+        existingSlot.setId("slot-1");
+        existingSlot.setFirstname("OldName");
+
+        Mockito.when(docSnapshot.exists()).thenReturn(true);
+        Mockito.when(docSnapshot.toObject(ClassSlot.class)).thenReturn(existingSlot);
+        Mockito.when(docSnapshot.getId()).thenReturn("slot-1");
+        
+        Mockito.when(slotDocRef.get()).thenReturn(ApiFutures.immediateFuture(docSnapshot));
+        Mockito.when(slotDocRef.set(any(ClassSlot.class))).thenReturn(ApiFutures.immediateFuture(writeResult));
+
+        ClassSlot updateSlot = new ClassSlot();
+        updateSlot.setId("slot-1");
+        updateSlot.setFirstname("NewName");
+
+        MvcResult mvcResult = mockMvc.perform(put("/api/companies/acme-corp/dates/date-1/times/time-1/classslots/update")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Collections.singletonList(updateSlot))))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(mvcResult))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Successfully updated 1 slots."));
+    }
+
+    @Test
+    @WithMockUser(username = "user")
+    public void testBatchResetClassSlots_Success() throws Exception {
+        WriteResult writeResult = Mockito.mock(WriteResult.class);
+        Mockito.when(slotDocRef.set(any(ClassSlot.class))).thenReturn(ApiFutures.immediateFuture(writeResult));
+
+        MvcResult mvcResult = mockMvc.perform(post("/api/companies/acme-corp/dates/date-1/times/time-1/classslots/delete")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Arrays.asList("slot-1", "slot-2"))))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(mvcResult))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Successfully reset 2 slots to defaults."));
     }
 }

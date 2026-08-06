@@ -8,12 +8,15 @@ public class ClassSlot {
 
     @DocumentId
     private String id;
+    private String ahaid;
     private String firstname;
     private String lastname;
+    private String email;
     private String postnominalcredential;
     private String attendance; // Show or No Show
     private String passfail; // Pass, Fail, No Grade
     private String score;
+    private String notes;
 
 
     public ClassSlot() {
@@ -26,6 +29,14 @@ public class ClassSlot {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getAhaid() {
+        return ahaid;
+    }
+
+    public void setAhaid(String ahaid) {
+        this.ahaid = ahaid;
     }
 
     public String getFirstname() {
@@ -42,6 +53,14 @@ public class ClassSlot {
 
     public void setLastname(String lastname) {
         this.lastname = lastname;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getPostnominalcredential() {
@@ -74,5 +93,13 @@ public class ClassSlot {
 
     public void setScore(String score) {
         this.score = score;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 }

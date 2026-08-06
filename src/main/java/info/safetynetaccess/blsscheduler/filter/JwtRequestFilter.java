@@ -28,6 +28,11 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     private final boolean DEBUG = true;
 
     @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        return false;
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
 
@@ -67,21 +72,24 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
                 boolean isValid = jwtUtil.validateToken(jwt, userDetails);
-                if  ( DEBUG ) {
-                    System.out.println("[JWT Filter] Token validation result: " + isValid);
+                if (DEBUG) {
+                    System.out.println("[JWT Filter] Token validation result for '" + username + "': " + isValid);
                 }
 
                 if (isValid) {
-                    UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
+                    UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
-                    usernamePasswordAuthenticationToken
-                            .setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
-                    System.out.println("[JWT Filter] SUCCESSFULLY Authenticated user '" + username + "', security context set.");
+                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                    
+                    if (DEBUG) {
+                        System.out.println("[JWT Filter] SUCCESSFULLY Authenticated user '" + username + "'");
+                        System.out.println("[JWT Filter] Authorities: " + userDetails.getAuthorities());
+                        System.out.println("[JWT Filter] SecurityContext principal: " + SecurityContextHolder.getContext().getAuthentication().getPrincipal());
+                    }
                 } else {
-                    System.out.println("[JWT Filter] WARNING: Token is invalid or expired for user '" + username + "'");
-                    logger.warn(String.format("JWT Token validation failed. Token username: '%s', UserDetails username: '%s'",
-                            username, userDetails.getUsername()));
+                    System.out.println("[JWT Filter] WARNING: Token validation failed for user '" + username + "'. Check if expired or secret mismatch.");
                 }
             } catch (Exception e) {
                 System.out.println("[JWT Filter] ERROR during authentication process: " + e.getMessage());
@@ -90,4 +98,5 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
         chain.doFilter(request, response);
     }
+
 }

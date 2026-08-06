@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -14,6 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Autowired
@@ -44,15 +46,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .securityContext(context -> context.requireExplicitSave(false))
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Use custom CORS configuration
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ASYNC, jakarta.servlet.DispatcherType.FORWARD).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/", "/index.html", "/api/authenticate", "/api/authenticate-by-company-name", "/api/register",
-                                        "/api/classes", "/error", "/api/companies", "/api/companies/*/approval",
-                                        "/api/companies/*/users", "/api/companies/*/users/*", "/api/test/**",
-                                        "/api/agent/**", "/api/instructors", "/api/instructors/**",
-                                        "/api/courses", "/api/courses/**","api/companies/*/dates").permitAll()
+                        .requestMatchers("/", "/index.html", "/api/authenticate", "/api/authenticate-by-company-name", "/api/register", "/error").permitAll()
+                        .requestMatchers("/api/test/**").permitAll() // Keep test suite accessible for verification
+                        .requestMatchers("/api/companies", "/api/companies/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

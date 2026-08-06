@@ -5,6 +5,7 @@ import info.safetynetaccess.blsscheduler.repository.CompanyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -20,27 +21,29 @@ public class CompanyController {
 
     // Get all registered companies (returning full company records including name, purpose and approval)
     @GetMapping
-    public Flux<Company> getAllCompanies() {
-        return companyRepository.findAll();
+    public ResponseEntity<java.util.List<Company>> getAllCompanies() {
+        java.util.List<Company> companies = companyRepository.findAll().collectList().block();
+        return ResponseEntity.ok(companies);
     }
 
 
     // Update company approval status
     @PutMapping("/{id}/approval")
-    public Mono<ResponseEntity<Object>> updateCompanyApproval(@PathVariable String id, @RequestBody Map<String, String> request) {
+    public ResponseEntity<Object> updateCompanyApproval(@PathVariable String id, @RequestBody Map<String, String> request) {
         String approval = request.get("approval");
         if (approval == null || approval.isEmpty()) {
-            return Mono.just(ResponseEntity.badRequest().body((Object) new ErrorResponse("approval status is required")));
+            return ResponseEntity.badRequest().body((Object) new ErrorResponse("approval status is required"));
         }
 
-        return companyRepository.findById(id)
-                .flatMap(company -> {
-                    company.setApproval(approval);
-                    return companyRepository.save(company)
-                            .map(saved -> ResponseEntity.ok((Object) saved));
-                })
-                .switchIfEmpty(Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body((Object) new ErrorResponse("Company with ID \"" + id + "\" not found."))));
+        Company company = companyRepository.findById(id).block();
+        if (company == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body((Object) new ErrorResponse("Company with ID \"" + id + "\" not found."));
+        }
+
+        company.setApproval(approval);
+        Company saved = companyRepository.save(company).block();
+        return ResponseEntity.ok((Object) saved);
     }
 
     // Helper Error Response DTO
