@@ -64,4 +64,4 @@ spring:
         database-id: bls-sched-db-prod
 app:
   cors:
-    allowed-origins: https://scheduler.safetynetacce.info
+    allowed-origins: https://www.blsscheduler.com,https://blsscheduler.com
