@@ -61,7 +61,7 @@ spring:
   cloud:
     gcp:
       firestore:
-        database-id: bls-sched-db-prod
+        database-id: bls-sched-db-test
 app:
   cors:
     allowed-origins: https://www.blsscheduler.com,https://blsscheduler.com

@@ -307,13 +307,13 @@ public class ClassSlotControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "unauthorized_user")
-    public void testCreateDateSchedule_AccessDenied_NotUser() throws Exception {
+    @WithMockUser(username = "any_authenticated_user")
+    public void testCreateDateSchedule_ValidationFailed_NegativeSlots_AuthenticatedUser() throws Exception {
         ClassSlotController.DateScheduleRequest request = new ClassSlotController.DateScheduleRequest();
         request.setDateValue("2026-06-15");
         request.setStarttime("1:00 pm");
         request.setEndtime("1:45 pm");
-        request.setNumberslots(8);
+        request.setNumberslots(-1);
 
         MvcResult mvcResult = mockMvc.perform(post("/api/companies/acme-corp/dates")
                         .with(csrf())
@@ -323,8 +323,8 @@ public class ClassSlotControllerTest {
                 .andReturn();
 
         mockMvc.perform(asyncDispatch(mvcResult))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("Access denied. Only the default 'user' can create date schedules."));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Slots must be between 1 and 30 (inclusive)."));
     }
     @Test
     @WithMockUser(username = "user")

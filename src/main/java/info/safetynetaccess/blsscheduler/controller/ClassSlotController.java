@@ -62,11 +62,6 @@ public class ClassSlotController {
                     .body((Object) new ErrorResponse("Authentication required.")));
         }
 
-        // Requirement: Only available to the “user” account
-        if (!"user".equals(principal.getName())) {
-            return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body((Object) new ErrorResponse("Access denied. Only the default 'user' can create date schedules.")));
-        }
 
         // Validate basic inputs
         if (request.getDateValue() == null || request.getDateValue().trim().isEmpty() ||

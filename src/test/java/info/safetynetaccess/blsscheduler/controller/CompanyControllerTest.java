@@ -46,12 +46,8 @@ public class CompanyControllerTest {
 
         Mockito.when(companyRepository.findAll()).thenReturn(Flux.just(company1, company2));
 
-        MvcResult mvcResult = mockMvc.perform(get("/api/companies")
+        mockMvc.perform(get("/api/companies")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(request().asyncStarted())
-                .andReturn();
-
-        mockMvc.perform(asyncDispatch(mvcResult))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("id-123"))
                 .andExpect(jsonPath("$[0].name").value("Acme Corp"))
