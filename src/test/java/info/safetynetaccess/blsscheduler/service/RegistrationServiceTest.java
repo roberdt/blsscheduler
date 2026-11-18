@@ -67,6 +67,7 @@ public class RegistrationServiceTest {
                 "CPR Training",
                 "John Doe",
                 "john.doe@example.com",
+                "123-456-7890",
                 "secret123",
                 "secret123"
         );

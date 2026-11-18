@@ -1,5 +1,6 @@
 package info.safetynetaccess.blsscheduler.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -23,6 +24,11 @@ public class RegistrationRequest {
     @Email(message = "Email address should be valid")
     private String emailAddress;
 
+    @NotBlank(message = "Phone number is required")
+    @Size(min = 7, max = 25, message = "Phone number must be between 7 and 25 characters")
+    @JsonAlias({"phoneNumber", "phone"})
+    private String phonenumber;
+
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters long")
     private String password;
@@ -34,10 +40,15 @@ public class RegistrationRequest {
     }
 
     public RegistrationRequest(String companyName, String purpose, String fullname, String emailAddress, String password, String verifyPassword) {
+        this(companyName, purpose, fullname, emailAddress, null, password, verifyPassword);
+    }
+
+    public RegistrationRequest(String companyName, String purpose, String fullname, String emailAddress, String phonenumber, String password, String verifyPassword) {
         this.companyName = companyName;
         this.purpose = purpose;
         this.fullname = fullname;
         this.emailAddress = emailAddress;
+        this.phonenumber = phonenumber;
         this.password = password;
         this.verifyPassword = verifyPassword;
     }
@@ -80,6 +91,14 @@ public class RegistrationRequest {
 
     public void setEmailAddress(String emailAddress) {
         this.emailAddress = emailAddress;
+    }
+
+    public String getPhonenumber() {
+        return phonenumber;
+    }
+
+    public void setPhonenumber(String phonenumber) {
+        this.phonenumber = phonenumber;
     }
 
     public String getPassword() {

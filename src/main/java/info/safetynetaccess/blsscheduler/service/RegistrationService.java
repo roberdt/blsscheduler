@@ -62,6 +62,7 @@ public class RegistrationService {
 
         User user = new User(request.getFullname(), request.getEmailAddress());
         user.setId(userId);
+        user.setPhonenumber(request.getPhonenumber());
 
         String hashedPassword = passwordEncoder.encode(request.getPassword());
         Password password = new Password(hashedPassword);

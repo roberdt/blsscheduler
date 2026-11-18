@@ -49,6 +49,7 @@ public class EmailServiceTest {
                 "BLS Certification",
                 "Jane Doe",
                 "jane.doe@example.com",
+                "123-456-7890",
                 "password123",
                 "password123"
         );
@@ -91,6 +92,7 @@ public class EmailServiceTest {
                 "BLS Certification",
                 "Jane Doe",
                 "jane.doe@example.com",
+                "123-456-7890",
                 "password123",
                 "password123"
         );
@@ -112,6 +114,7 @@ public class EmailServiceTest {
                 "BLS Certification",
                 "Jane Doe",
                 "jane.doe@example.com",
+                "123-456-7890",
                 "password123",
                 "password123"
         );
@@ -151,6 +154,7 @@ public class EmailServiceTest {
                 "BLS Certification",
                 "Jane Doe",
                 "jane.doe@example.com",
+                "123-456-7890",
                 "password123",
                 "password123"
         );

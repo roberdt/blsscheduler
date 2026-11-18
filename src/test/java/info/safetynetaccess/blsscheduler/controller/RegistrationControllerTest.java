@@ -51,6 +51,7 @@ public class RegistrationControllerTest {
                 "To manage basic life support training slots",
                 "John Doe",
                 "john.doe@example.com",
+                "123-456-7890",
                 "password123",
                 "password123"
         );
