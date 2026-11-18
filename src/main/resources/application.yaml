@@ -8,6 +8,21 @@ spring:
       project-id: bls-trainingscheduler
       firestore:
         database-id: bls-sched-db-test
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: safetynet@safetynetaccess.org
+    password: "${SPRING_MAIL_PASSWORD:${MAIL_PASSWORD:${sm://gmail-app-password}}}"
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 server:
   port: 8080
   address: 0.0.0.0
@@ -19,6 +34,10 @@ app:
     password: "${sm://super-user-password}"
   jwt:
     secret: "${sm://jwt-key}"
+  mail:
+    from: safetynet@safetynetaccess.org
+    sender-name: "Safety Net Access BLS Scheduler"
+    admin-notification-email: "${ADMIN_NOTIFICATION_EMAIL:rerdt@safetynetaccess.info}"
 
 logging:
   level:

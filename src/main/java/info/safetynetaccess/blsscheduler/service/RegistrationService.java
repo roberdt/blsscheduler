@@ -11,6 +11,8 @@ import info.safetynetaccess.blsscheduler.dto.RegistrationResponse;
 import info.safetynetaccess.blsscheduler.model.Company;
 import info.safetynetaccess.blsscheduler.model.Password;
 import info.safetynetaccess.blsscheduler.model.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,11 +23,16 @@ import java.util.UUID;
 @Service
 public class RegistrationService {
 
+    private static final Logger log = LoggerFactory.getLogger(RegistrationService.class);
+
     @Autowired
     private Firestore firestore;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private EmailService emailService;
 
     /**
      * Helper utility to convert a Google ApiFuture into a Reactor Mono.
@@ -73,11 +80,23 @@ public class RegistrationService {
         DocumentReference passwordRef = userRef.collection("passwords")
                 .document("credentials");
 
-        // Write sequentially and reactive-ly
+        // Write sequentially and reactive-ly, then dispatch confirmation and admin alert emails
         return fromApiFuture(companyRef.set(company))
                 .then(fromApiFuture(userRef.set(user)))
                 .then(fromApiFuture(passwordRef.set(password)))
-                .map(writeResult -> new RegistrationResponse(
+                .then(Mono.when(
+                        emailService.sendRegistrationConfirmation(request)
+                                .onErrorResume(e -> {
+                                    log.error("Failed to send registration confirmation email to {}: {}", request.getEmailAddress(), e.getMessage());
+                                    return Mono.empty();
+                                }),
+                        emailService.sendAdminRegistrationAlert(request, companyId, userId)
+                                .onErrorResume(e -> {
+                                    log.error("Failed to send admin registration alert for company {}: {}", companyId, e.getMessage());
+                                    return Mono.empty();
+                                })
+                ))
+                .thenReturn(new RegistrationResponse(
                         true,
                         "Company and administrator user registered successfully",
                         companyId,

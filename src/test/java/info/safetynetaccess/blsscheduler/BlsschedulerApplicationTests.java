@@ -12,7 +12,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(properties = {
 		"app.admin.username=Admin",
 		"app.admin.password=$2a$10$9SP2mGJJ4m26uPcqsSinyeUgZX.1GvNTj0JTyrcma9q6Azzqsz9sm",
-		"app.jwt.secret=404E635266556A586E3272357538782F413F4428472B4B625064536766703373"
+		"app.jwt.secret=404E635266556A586E3272357538782F413F4428472B4B625064536766703373",
+		"spring.mail.password=dummy"
 })
 class BlsschedulerApplicationTests {
 
