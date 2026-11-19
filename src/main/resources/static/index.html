@@ -1142,7 +1142,9 @@
                 preset.headers.forEach(h => {
                     // Pre-fill captured token if available
                     let val = h.value;
-                    if (h.name === 'Authorization' && val.includes('<INSERT_CAPTURED_JWT_HERE>') && capturedToken) {
+                    if (h.name === 'Authorization'
+                            && (val === '******' || val.includes('<INSERT_CAPTURED_JWT_HERE>'))
+                            && capturedToken) {
                         val = `Bearer ${capturedToken}`;
                     }
                     addHeaderRow(h.name, val);
